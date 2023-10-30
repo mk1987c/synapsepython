@@ -23,8 +23,17 @@ Steps
     az login
     
 3. upload wheel package to storage account.
-    a.  Create a powershell script.
-    
+    a. Create a powershell script.
+    b. invoke powersheel script with below command
+
+    $WHEEL_UPLOAD_STATUS=az storage blob upload `
+    --account-name $storage_account_name `
+    --container-name $container_name `
+    --name "$path$wheel_filename" `
+    --file $wheel_sourcepath$wheel_filename `
+    --overwrite `
+    --auth-mode login `
+    | ConvertFrom-Json
 
 
 4. from storage account import wheel package to synapse workspace.
