@@ -24,6 +24,9 @@ Steps
     
 3. upload wheel package to storage account.
     a. Create a powershell script.
+        - $project_root = $PWD  # you can set the $project_root variable using the $PWD automatic variable, which represents the current working directory:
+        - echo $project_root   # verify that the variable is set correctly by echoing its value:
+
     b. invoke powersheel script with below command
 
     $WHEEL_UPLOAD_STATUS=az storage blob upload `
