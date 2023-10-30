@@ -18,4 +18,16 @@ Steps
     python setup.py bdist_wheel
 
 
+3. Login to Azure account using az account
+
+    az login
+    
+3. upload wheel package to storage account.
+    a.  Create a powershell script.
+    
+
+
+4. from storage account import wheel package to synapse workspace.
+5. and from synapse workspace import library to required cluster.
+
 
