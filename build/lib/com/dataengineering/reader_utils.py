@@ -11,18 +11,51 @@ class reader:
         self.spark = spark
         print("started reading the data")
 
-    def read_streaming_data(self, file_format: str, max_files_per_trigger: int, file_extension : str, delimiter : str, schema: StructType, path: str) -> DataFrame:        
+    def read_streaming_data(self, file_format: str, max_files_per_trigger: int, file_extension : str, delimiter : str, schema: StructType, path: str, csv_header: bool) -> DataFrame:        
             """
-            Read streaming data from various file formats (CSV, JSON, XML) based on the 'file_format' parameter.
+            Read streaming data from a specified directory using Apache Spark structured streaming.
+
+            Args:
+                file_format (str): The format of the input files, e.g., 'csv', 'parquet', 'json', etc.
+                max_files_per_trigger (int): The maximum number of files to process per trigger interval.
+                file_extension (str): The file extension to filter files in the specified directory, e.g., '.csv', '.json'.
+                delimiter (str): The field delimiter for CSV files, e.g., ',' or '\t'.
+                schema (pyspark.sql.types.StructType): The schema of the DataFrame.
+                path (str): The directory path where streaming data is located.
+                csv_header (bool): Whether the input CSV files have a header row use True or false.
 
             Returns:
-                DataFrame: Streaming DataFrame.
+                pyspark.sql.DataFrame: A DataFrame containing the streaming data.
 
+            Note:
+            - This method is used for reading data from a directory in a streaming fashion using Apache Spark structured streaming.
+            - The 'file_format' should be one of the supported formats in Apache Spark, such as 'csv', 'parquet', 'json', etc.
+            - 'max_files_per_trigger' controls the number of files to process per streaming trigger interval.
+            - 'file_extension' is used to filter files in the specified directory. It should include the dot, e.g., '.csv', '.json'.
+            - 'delimiter' is only applicable when 'file_format' is 'csv' and specifies the field delimiter in CSV files.
+            - 'schema' defines the structure of the resulting DataFrame and should be specified as a StructType.
+            - 'path' is the directory where the streaming data is located.
+            - 'csv_header' indicates whether the CSV files have a header row that should be used as column names.
+
+            Example:
+            ```
+            schema = StructType([
+                StructField("id", IntegerType(), True),
+                StructField("name", StringType(), True),
+                StructField("age", IntegerType(), True)
+            ])
+            streaming_df = read_streaming_data('csv', 5, '.csv', ',', schema, '/data/streaming', True)
+            query = streaming_df.writeStream.outputMode("append").format("console").start()
+            query.awaitTermination()
+            ```
+
+            See Apache Spark documentation for more information on structured streaming:
+            https://spark.apache.org/docs/latest/structured-streaming-programming-guide.html
             """
             if file_format.lower() == "csv":
                 # Read CSV data
                 df = (self.spark.readStream 
-                    .option("header", "false")
+                    .option("header", csv_header)
                     .option("maxFilesPerTrigger", max_files_per_trigger)
                     .option("fileNameOnly", "true")
                     .option("pathGlobFilter", file_extension if file_extension else "*")  # Use a default filter if file_format is not defined
