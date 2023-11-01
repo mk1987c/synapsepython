@@ -15,12 +15,12 @@
 			"driverCores": 4,
 			"executorMemory": "28g",
 			"executorCores": 4,
-			"numExecutors": 1,
+			"numExecutors": 2,
 			"conf": {
 				"spark.dynamicAllocation.enabled": "false",
-				"spark.dynamicAllocation.minExecutors": "1",
-				"spark.dynamicAllocation.maxExecutors": "1",
-				"spark.autotune.trackingId": "509cfe7e-8215-4be7-8858-d77456e9f932"
+				"spark.dynamicAllocation.minExecutors": "2",
+				"spark.dynamicAllocation.maxExecutors": "2",
+				"spark.autotune.trackingId": "839c8ac5-eead-4127-b80e-8c96dcd7d5b3"
 			}
 		},
 		"metadata": {
@@ -57,7 +57,7 @@
 					"from pyspark.sql import SparkSession\r\n",
 					"from pyspark.sql import Row"
 				],
-				"execution_count": 7
+				"execution_count": 8
 			},
 			{
 				"cell_type": "code",
@@ -89,7 +89,7 @@
 					"df = spark.createDataFrame(data, schema)\r\n",
 					"display(df)"
 				],
-				"execution_count": null
+				"execution_count": 2
 			},
 			{
 				"cell_type": "code",
@@ -108,7 +108,7 @@
 					"spark = SparkSession.builder.appName(\"SimpleDataFrameExample\").getOrCreate()\r\n",
 					""
 				],
-				"execution_count": null
+				"execution_count": 4
 			},
 			{
 				"cell_type": "code",
@@ -131,7 +131,7 @@
 					"display(df_lk)\r\n",
 					""
 				],
-				"execution_count": null
+				"execution_count": 5
 			},
 			{
 				"cell_type": "code",
@@ -151,7 +151,7 @@
 					"df = spark.read.format(\"csv\").load(f\"abfss://landingzoneraw@sasyanpse.dfs.core.windows.net/lz_zone/*\")\r\n",
 					"display(df)"
 				],
-				"execution_count": null
+				"execution_count": 1
 			},
 			{
 				"cell_type": "code",
