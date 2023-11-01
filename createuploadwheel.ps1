@@ -10,32 +10,22 @@ param(
     [string]$storage_account_name = "",
 
     [Parameter(Mandatory)]
-    [string]$container_name = "",
-
-    [Parameter()]
-    [string]$path = ""
+    [string]$container_name = ""
 )
 
-# Input parsing
-if ($path -ne "") {
-    $path = $path.TrimEnd('\/')
-    $path = "$path/"
-}
-
-# Get project root path
-$project_root = (Split-Path $PSScriptRoot -Parent)
-
-# Create the wheel
-python -m pip install --upgrade pip
-python -m pip install wheel
-python  C:/Users/makum/Documents/Deepak/synapsepython/setup.py bdist_wheel -d $project_root/wheels
-
-
 $wheel_sourcepath = "C:/Users/makum/Documents/Deepak/synapsepython/dist/"
-$wheel_filename = "dataengineering-1.0-py3-none-any"
+$wheel_filename = "dataengineering001-1.0-py3-none-any.whl"
 
-$storage_fullpath = "abfss://$container_name@$storage_account_name.dfs.core.windows.net/dataengineering/"
+$storage_fullpath = "abfss://$container_name@$storage_account_name.dfs.core.windows.net/"
 Write-Host "Uploading wheel '$wheel_filename', from location '$wheel_sourcepath' to remote storage location '$storage_fullpath'."
 
 # Upload the wheel to Azure storage account
+$WHEEL_UPLOAD_STATUS=az storage blob upload `
+    --account-name $storage_account_name `
+    --container-name $container_name `
+    --name "$wheel_filename" `
+    --file $wheel_sourcepath$wheel_filename `
+    --overwrite `
+    --auth-mode login `
+    | ConvertFrom-Json
 

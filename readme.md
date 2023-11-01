@@ -17,29 +17,24 @@ Steps
 
     python setup.py bdist_wheel
 
-
 3. Login to Azure account using az account
 
     az login
     
-3. upload wheel package to storage account.
+4. upload wheel package to storage account.
     a. Create a powershell script.
         - $project_root = $PWD  # you can set the $project_root variable using the $PWD automatic variable, which represents the current working directory:
         - echo $project_root   # verify that the variable is set correctly by echoing its value:
 
     b. invoke powersheel script with below command
+        - ./createuploadwheel.ps1 -storage_account_name "sasyanpse" -container_name "library"
 
-    $WHEEL_UPLOAD_STATUS=az storage blob upload `
-    --account-name $storage_account_name `
-    --container-name $container_name `
-    --name "$path$wheel_filename" `
-    --file $wheel_sourcepath$wheel_filename `
-    --overwrite `
-    --auth-mode login `
-    | ConvertFrom-Json
+5. from storage account import wheel package to synapse workspace.
+
+6. once imported in synpase workspace we can import in cluster using 
+    - ./install_package.ps1
 
 
-4. from storage account import wheel package to synapse workspace.
-5. and from synapse workspace import library to required cluster.
+6. and from synapse workspace import library to required cluster.
 
 
