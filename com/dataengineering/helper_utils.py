@@ -8,8 +8,13 @@ class helper:
 
     def replace_null_with_zero(self, dataframe, columns):
         for column in columns:
-            for column in dataframe.columns:
-                dataframe = dataframe.withColumn(column, when(col(column).isNull(), 0).otherwise(col(column)))
+            dataframe = dataframe.withColumn(column, when(col(column).isNull(), 1).otherwise(col(column)))
+        return dataframe
+                
+    def replace_null_with_ones(self, dataframe, columns):
+        for column in columns:
+            dataframe = dataframe.withColumn(column, when(col(column).isNull(), 1).otherwise(col(column)))
+        return dataframe
 
     def get_dataframe(self):
         return self.dataframe

@@ -28,7 +28,7 @@ Steps
 
     b. invoke powersheel script with below command
         - ./createuploadwheel.ps1 -storage_account_name "sasyanpse" -container_name "library"
-
+C:\Users\makum\Downloads\streaming_Training
 5. from storage account import wheel package to synapse workspace.
 
 6. once imported in synpase workspace we can import in cluster using 
