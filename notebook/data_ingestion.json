@@ -20,7 +20,7 @@
 				"spark.dynamicAllocation.enabled": "false",
 				"spark.dynamicAllocation.minExecutors": "1",
 				"spark.dynamicAllocation.maxExecutors": "1",
-				"spark.autotune.trackingId": "c9240dbe-6390-4898-9345-aac5acf46265"
+				"spark.autotune.trackingId": "509cfe7e-8215-4be7-8858-d77456e9f932"
 			}
 		},
 		"metadata": {
@@ -43,7 +43,7 @@
 					"authResource": "https://dev.azuresynapse.net"
 				},
 				"sparkVersion": "3.3",
-				"nodeCount": 3,
+				"nodeCount": 10,
 				"cores": 4,
 				"memory": 28,
 				"automaticScaleJobs": false
@@ -57,7 +57,7 @@
 					"from pyspark.sql import SparkSession\r\n",
 					"from pyspark.sql import Row"
 				],
-				"execution_count": 3
+				"execution_count": 7
 			},
 			{
 				"cell_type": "code",
@@ -89,7 +89,7 @@
 					"df = spark.createDataFrame(data, schema)\r\n",
 					"display(df)"
 				],
-				"execution_count": 2
+				"execution_count": null
 			},
 			{
 				"cell_type": "code",
@@ -108,7 +108,7 @@
 					"spark = SparkSession.builder.appName(\"SimpleDataFrameExample\").getOrCreate()\r\n",
 					""
 				],
-				"execution_count": 4
+				"execution_count": null
 			},
 			{
 				"cell_type": "code",
@@ -131,7 +131,7 @@
 					"display(df_lk)\r\n",
 					""
 				],
-				"execution_count": 5
+				"execution_count": null
 			},
 			{
 				"cell_type": "code",
@@ -151,7 +151,7 @@
 					"df = spark.read.format(\"csv\").load(f\"abfss://landingzoneraw@sasyanpse.dfs.core.windows.net/lz_zone/*\")\r\n",
 					"display(df)"
 				],
-				"execution_count": 1
+				"execution_count": null
 			},
 			{
 				"cell_type": "code",
