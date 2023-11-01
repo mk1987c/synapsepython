@@ -20,7 +20,7 @@
 				"spark.dynamicAllocation.enabled": "false",
 				"spark.dynamicAllocation.minExecutors": "2",
 				"spark.dynamicAllocation.maxExecutors": "2",
-				"spark.autotune.trackingId": "bdfc725a-ac52-44d0-9782-9e7959ceb7c5"
+				"spark.autotune.trackingId": "dcef74f8-6618-4034-961f-da0fc8c45cf6"
 			}
 		},
 		"metadata": {
@@ -28,7 +28,7 @@
 			"enableDebugMode": true,
 			"kernelspec": {
 				"name": "synapse_pyspark",
-				"display_name": "python"
+				"display_name": "Synapse PySpark"
 			},
 			"language_info": {
 				"name": "python"
@@ -56,7 +56,7 @@
 				"source": [
 					"print(\"test\")"
 				],
-				"execution_count": null
+				"execution_count": 1
 			},
 			{
 				"cell_type": "code",
@@ -72,7 +72,20 @@
 					}
 				},
 				"source": [
-					""
+					"# Create a list of Row objects with null values\r\n",
+					"data = [\r\n",
+					"    Row(name=\"John\", age=30),\r\n",
+					"    Row(name=\"Alice\", age=None),\r\n",
+					"    Row(name=None, age=25),\r\n",
+					"    Row(name=\"Bob\", age=40),\r\n",
+					"]\r\n",
+					"\r\n",
+					"# Define the schema for the DataFrame\r\n",
+					"schema = [\"name\", \"age\"]\r\n",
+					"\r\n",
+					"# Create a DataFrame\r\n",
+					"df = spark.createDataFrame(data, schema)\r\n",
+					"display(df)"
 				],
 				"execution_count": null
 			}
