@@ -20,7 +20,7 @@
 				"spark.dynamicAllocation.enabled": "false",
 				"spark.dynamicAllocation.minExecutors": "1",
 				"spark.dynamicAllocation.maxExecutors": "1",
-				"spark.autotune.trackingId": "b318b09f-a423-4044-ba93-c6c618c64c1b"
+				"spark.autotune.trackingId": "ac598f79-8123-472c-a906-4bac900d0605"
 			}
 		},
 		"metadata": {
@@ -59,7 +59,7 @@
 					"from pyspark.sql import Row\r\n",
 					""
 				],
-				"execution_count": 1
+				"execution_count": 2
 			},
 			{
 				"cell_type": "code",
@@ -128,6 +128,25 @@
 					"df.writeStream.format(\"delta\").option(\"path\",raw_path).option(\"checkpointLocation\",ck_path).start()"
 				],
 				"execution_count": 16
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"dfdf= spark.read.format(\"delta\").load(raw_path)\r\n",
+					"display(dfdf)"
+				],
+				"execution_count": 3
 			},
 			{
 				"cell_type": "code",
