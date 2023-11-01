@@ -20,7 +20,7 @@
 				"spark.dynamicAllocation.enabled": "false",
 				"spark.dynamicAllocation.minExecutors": "2",
 				"spark.dynamicAllocation.maxExecutors": "2",
-				"spark.autotune.trackingId": "0d565619-80ab-4d86-9653-e2b38cdd8e20"
+				"spark.autotune.trackingId": "b769a768-c390-48e3-aa7e-f5f8816f31aa"
 			}
 		},
 		"metadata": {
@@ -44,8 +44,8 @@
 				},
 				"sparkVersion": "3.3",
 				"nodeCount": 10,
-				"cores": 4,
-				"memory": 28,
+				"cores": 8,
+				"memory": 56,
 				"automaticScaleJobs": false
 			},
 			"sessionKeepAliveTimeout": 30
@@ -55,9 +55,10 @@
 				"cell_type": "code",
 				"source": [
 					"from pyspark.sql import SparkSession\r\n",
+					"from pyspark.sql.types import StructType, StructField, StringType\r\n",
 					"from pyspark.sql import Row"
 				],
-				"execution_count": 1
+				"execution_count": 24
 			},
 			{
 				"cell_type": "code",
@@ -70,26 +71,13 @@
 						"transient": {
 							"deleting": false
 						}
-					},
-					"collapsed": false
+					}
 				},
 				"source": [
-					"# Create a list of Row objects with null values\r\n",
-					"data = [\r\n",
-					"    Row(name=\"John\", age=30),\r\n",
-					"    Row(name=\"Alice\", age=None),\r\n",
-					"    Row(name=None, age=25),\r\n",
-					"    Row(name=\"Bob\", age=40),\r\n",
-					"]\r\n",
-					"\r\n",
-					"# Define the schema for the DataFrame\r\n",
-					"schema = [\"name\", \"age\"]\r\n",
-					"\r\n",
-					"# Create a DataFrame\r\n",
-					"df = spark.createDataFrame(data, schema)\r\n",
-					"display(df)"
+					"from com.dataengineering.writer_utils import writer\r\n",
+					"from com.dataengineering.reader_utils import reader"
 				],
-				"execution_count": 2
+				"execution_count": 36
 			},
 			{
 				"cell_type": "code",
@@ -106,9 +94,40 @@
 				},
 				"source": [
 					"spark = SparkSession.builder.appName(\"SimpleDataFrameExample\").getOrCreate()\r\n",
-					""
+					"lz_path  = f\"abfss://landingzoneraw@sasyanpse.dfs.core.windows.net/lz_zone/*\"\r\n",
+					"raw_path  = f\"abfss://landingzoneraw@sasyanpse.dfs.core.windows.net/raw_zone/values/\"\r\n",
+					"ck_path  = f\"abfss://landingzoneraw@sasyanpse.dfs.core.windows.net/raw_zone/values_checkpoint/\""
 				],
-				"execution_count": 4
+				"execution_count": 26
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"schema = StructType([\r\n",
+					"    StructField(\"Year\", StringType(), True),\r\n",
+					"    StructField(\"month\", StringType(), True),\r\n",
+					"    StructField(\"Industry_aggregation_NZSIOC\", StringType(), True),\r\n",
+					"    StructField(\"Industry_code_NZSIOC\", StringType(), True),\r\n",
+					"    StructField(\"Industry_name_NZSIOC\", StringType(), True),\r\n",
+					"    StructField(\"Units\", StringType(), True),\r\n",
+					"    StructField(\"Variable_code\", StringType(), True),\r\n",
+					"    StructField(\"Variable_name\", StringType(), True),\r\n",
+					"    StructField(\"Variable_category\", StringType(), True),\r\n",
+					"    StructField(\"Value\", StringType(), True)\r\n",
+					"])"
+				],
+				"execution_count": 27
 			},
 			{
 				"cell_type": "code",
@@ -167,20 +186,19 @@
 					}
 				},
 				"source": [
-					"from com.dataengineering.writer_utils import writer\r\n",
-					"from com.dataengineering.reader_utils import reader\r\n",
 					"\r\n",
-					"reader.read_streaming_data(\r\n",
+					"reader = reader(spark)\r\n",
+					"df = reader.read_streaming_data(\r\n",
 					"    file_format=\"csv\",\r\n",
 					"    max_files_per_trigger=1,\r\n",
 					"    file_extension=\"csv\",\r\n",
 					"    delimiter=\",\",\r\n",
-					"    schema = f\"abfss://{container_name}@{storage_account_name}.dfs.core.windows.net\"\r\n",
-					"    path= f\"abfss://{container_name}@{storage_account_name}.dfs.core.windows.net/lz_zone/\"\r\n",
+					"    schema = schema,\r\n",
+					"    path= lz_path\r\n",
 					"    )\r\n",
 					""
 				],
-				"execution_count": 6
+				"execution_count": 28
 			},
 			{
 				"cell_type": "code",
@@ -196,9 +214,31 @@
 					}
 				},
 				"source": [
-					""
+					"writer = writer(spark)"
 				],
-				"execution_count": 5
+				"execution_count": 37
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"writer.write_streaming_data(\r\n",
+					"    df,\r\n",
+					"    raw_path, \r\n",
+					"    '2 seconds'\r\n",
+					"    )"
+				],
+				"execution_count": 45
 			},
 			{
 				"cell_type": "code",
