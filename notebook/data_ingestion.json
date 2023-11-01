@@ -20,7 +20,7 @@
 				"spark.dynamicAllocation.enabled": "false",
 				"spark.dynamicAllocation.minExecutors": "2",
 				"spark.dynamicAllocation.maxExecutors": "2",
-				"spark.autotune.trackingId": "dcef74f8-6618-4034-961f-da0fc8c45cf6"
+				"spark.autotune.trackingId": "06e7e168-96b5-4de3-b827-5643f24f984c"
 			}
 		},
 		"metadata": {
@@ -54,9 +54,10 @@
 			{
 				"cell_type": "code",
 				"source": [
-					"print(\"test\")"
+					"from pyspark.sql import SparkSession\r\n",
+					"from pyspark.sql import Row"
 				],
-				"execution_count": 1
+				"execution_count": 2
 			},
 			{
 				"cell_type": "code",
@@ -69,7 +70,8 @@
 						"transient": {
 							"deleting": false
 						}
-					}
+					},
+					"collapsed": false
 				},
 				"source": [
 					"# Create a list of Row objects with null values\r\n",
@@ -87,7 +89,45 @@
 					"df = spark.createDataFrame(data, schema)\r\n",
 					"display(df)"
 				],
-				"execution_count": null
+				"execution_count": 3
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"spark = SparkSession.builder.appName(\"SimpleDataFrameExample\").getOrCreate()\r\n",
+					""
+				],
+				"execution_count": 9
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"from com.dataengineering import helper\r\n",
+					"helper = helper()"
+				],
+				"execution_count": 10
 			}
 		]
 	}
