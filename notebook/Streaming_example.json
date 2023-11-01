@@ -20,7 +20,7 @@
 				"spark.dynamicAllocation.enabled": "false",
 				"spark.dynamicAllocation.minExecutors": "1",
 				"spark.dynamicAllocation.maxExecutors": "1",
-				"spark.autotune.trackingId": "0765212f-ac0b-4225-b7a7-709849a051f3"
+				"spark.autotune.trackingId": "9186b472-ed3a-43dc-9ef5-36dcfac0819e"
 			}
 		},
 		"metadata": {
@@ -59,7 +59,7 @@
 					"from pyspark.sql import Row\r\n",
 					""
 				],
-				"execution_count": 5
+				"execution_count": 3
 			},
 			{
 				"cell_type": "code",
@@ -79,7 +79,7 @@
 					"raw_path  = f\"abfss://landingzoneraw@sasyanpse.dfs.core.windows.net/raw_zone/values/\"\r\n",
 					"ck_path  = f\"abfss://landingzoneraw@sasyanpse.dfs.core.windows.net/raw_zone/values_checkpoint/\""
 				],
-				"execution_count": 15
+				"execution_count": 6
 			},
 			{
 				"cell_type": "code",
@@ -108,7 +108,7 @@
 					"    StructField(\"Value\", StringType(), True)\r\n",
 					"])"
 				],
-				"execution_count": 10
+				"execution_count": 5
 			},
 			{
 				"cell_type": "code",
@@ -140,13 +140,14 @@
 						"transient": {
 							"deleting": false
 						}
-					}
+					},
+					"collapsed": false
 				},
 				"source": [
 					"dfdf= spark.read.format(\"delta\").load(raw_path)\r\n",
 					"display(dfdf)"
 				],
-				"execution_count": 3
+				"execution_count": 7
 			},
 			{
 				"cell_type": "code",
