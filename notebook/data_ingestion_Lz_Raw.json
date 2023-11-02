@@ -1,5 +1,5 @@
 {
-	"name": "data_ingestion",
+	"name": "data_ingestion_Lz_Raw",
 	"properties": {
 		"folder": {
 			"name": "data"
@@ -20,7 +20,7 @@
 				"spark.dynamicAllocation.enabled": "false",
 				"spark.dynamicAllocation.minExecutors": "2",
 				"spark.dynamicAllocation.maxExecutors": "2",
-				"spark.autotune.trackingId": "9f035d60-b61a-4e43-9ef8-3f6c7f5f5225"
+				"spark.autotune.trackingId": "cccd2af4-77b0-4a5e-ae77-b46924504226"
 			}
 		},
 		"metadata": {
@@ -59,7 +59,7 @@
 					"from pyspark.sql.types import StructType, StructField, StringType\r\n",
 					""
 				],
-				"execution_count": 18
+				"execution_count": 30
 			},
 			{
 				"cell_type": "code",
@@ -81,7 +81,7 @@
 					"reader = reader(spark)\r\n",
 					"writer = writer(spark)"
 				],
-				"execution_count": 19
+				"execution_count": null
 			},
 			{
 				"cell_type": "code",
@@ -101,7 +101,7 @@
 					"raw_path  = f\"abfss://landingzoneraw@sasyanpse.dfs.core.windows.net/raw_zone/values/\"\r\n",
 					"ck_path  = f\"abfss://landingzoneraw@sasyanpse.dfs.core.windows.net/raw_zone/values_checkpoint/\""
 				],
-				"execution_count": 20
+				"execution_count": null
 			},
 			{
 				"cell_type": "code",
@@ -130,7 +130,7 @@
 					"    StructField(\"Value\", StringType(), True)\r\n",
 					"])"
 				],
-				"execution_count": 21
+				"execution_count": null
 			},
 			{
 				"cell_type": "code",
@@ -157,7 +157,7 @@
 					"    )\r\n",
 					""
 				],
-				"execution_count": 23
+				"execution_count": null
 			},
 			{
 				"cell_type": "code",
@@ -179,7 +179,7 @@
 					"    processing_time='2 seconds'\r\n",
 					"    )"
 				],
-				"execution_count": 24
+				"execution_count": null
 			},
 			{
 				"cell_type": "code",
@@ -197,7 +197,7 @@
 				"source": [
 					"query.awaitTermination()"
 				],
-				"execution_count": 27
+				"execution_count": null
 			}
 		]
 	}

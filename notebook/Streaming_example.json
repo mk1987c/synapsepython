@@ -20,7 +20,7 @@
 				"spark.dynamicAllocation.enabled": "false",
 				"spark.dynamicAllocation.minExecutors": "2",
 				"spark.dynamicAllocation.maxExecutors": "2",
-				"spark.autotune.trackingId": "abe5dd81-b5c8-4c09-bb10-c130689e40c8"
+				"spark.autotune.trackingId": "e34451dc-282b-4909-9403-97c2fe7fcfbb"
 			}
 		},
 		"metadata": {
@@ -124,7 +124,7 @@
 					}
 				},
 				"source": [
-					"df = spark.read.format(\"csv\").option(\"header\", True ).load(lz_path)\r\n",
+					"df = spark.read.format(\"csv\").option(\"header\", True).load(lz_path)\r\n",
 					"df.write.format(\"delta\").save(raw_path)\r\n",
 					"display(df)"
 				],
@@ -148,26 +148,6 @@
 					"df.writeStream.format(\"delta\").option(\"path\",raw_path).option(\"checkpointLocation\",ck_path).start()"
 				],
 				"execution_count": 16
-			},
-			{
-				"cell_type": "code",
-				"metadata": {
-					"jupyter": {
-						"source_hidden": false,
-						"outputs_hidden": false
-					},
-					"nteract": {
-						"transient": {
-							"deleting": false
-						}
-					},
-					"collapsed": false
-				},
-				"source": [
-					"dfdf= spark.read.format(\"delta\").load(raw_path)\r\n",
-					"display(dfdf)"
-				],
-				"execution_count": 7
 			},
 			{
 				"cell_type": "code",

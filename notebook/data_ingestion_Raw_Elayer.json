@@ -20,7 +20,7 @@
 				"spark.dynamicAllocation.enabled": "false",
 				"spark.dynamicAllocation.minExecutors": "2",
 				"spark.dynamicAllocation.maxExecutors": "2",
-				"spark.autotune.trackingId": "fc0db96c-3f0b-467f-b851-977991ff8415"
+				"spark.autotune.trackingId": "5f8db2f2-2a99-4aac-934d-a09196df39b2"
 			}
 		},
 		"metadata": {
@@ -58,9 +58,10 @@
 					"from pyspark.sql import Row\r\n",
 					"from pyspark.sql.types import StructType, StructField, StringType\r\n",
 					"from com.dataengineering.qualitycheck_utils import Dataquality\r\n",
-					"from com.dataengineering.writer_utils import writer"
+					"from com.dataengineering.writer_utils import writer\r\n",
+					"from com.dataengineering.helper_utils import helper"
 				],
-				"execution_count": 19
+				"execution_count": 13
 			},
 			{
 				"cell_type": "code",
@@ -79,7 +80,7 @@
 					"raw_path  = f\"abfss://landingzoneraw@sasyanpse.dfs.core.windows.net/raw_zone/values/\"\r\n",
 					"elayer_path = f\"abfss://landingzoneraw@sasyanpse.dfs.core.windows.net/elayer_zone/values/\""
 				],
-				"execution_count": 15
+				"execution_count": 3
 			},
 			{
 				"cell_type": "code",
@@ -108,7 +109,7 @@
 					"    StructField(\"Value\", StringType(), True)\r\n",
 					"])"
 				],
-				"execution_count": 16
+				"execution_count": 4
 			},
 			{
 				"cell_type": "code",
@@ -126,7 +127,7 @@
 				"source": [
 					"df = spark.readStream.format(\"delta\").load(raw_path)"
 				],
-				"execution_count": 7
+				"execution_count": 5
 			},
 			{
 				"cell_type": "code",
@@ -142,11 +143,31 @@
 					}
 				},
 				"source": [
-					"dq_check = {\"check_duplicate_in_columns\": [], \"check_column_is_not_null\": [\"Units\"]}\r\n",
+					"dq_check = {\"check_column_is_not_null\": [\"Units\"]}\r\n",
 					"qc_check = Dataquality(spark)\r\n",
-					"writer = writer(spark)"
+					""
 				],
-				"execution_count": 20
+				"execution_count": 6
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"helper = helper(spark)\r\n",
+					"df = helper.add_metadata_columns(df)\r\n",
+					""
+				],
+				"execution_count": 12
 			},
 			{
 				"cell_type": "code",
@@ -165,7 +186,25 @@
 					"df = qc_check.run_data_quality_checks(dq_check, df)\r\n",
 					""
 				],
-				"execution_count": 23
+				"execution_count": 8
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"writer = writer(spark)"
+				],
+				"execution_count": 10
 			},
 			{
 				"cell_type": "code",
@@ -187,7 +226,7 @@
 					"    processing_time='2 seconds'\r\n",
 					"    )"
 				],
-				"execution_count": null
+				"execution_count": 11
 			}
 		]
 	}
