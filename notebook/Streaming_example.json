@@ -20,7 +20,7 @@
 				"spark.dynamicAllocation.enabled": "false",
 				"spark.dynamicAllocation.minExecutors": "2",
 				"spark.dynamicAllocation.maxExecutors": "2",
-				"spark.autotune.trackingId": "3f6c0d8d-b068-4d86-bed6-cc1ccded0f77"
+				"spark.autotune.trackingId": "1b5de317-6c3f-4321-a5ae-32a2cae4cf35"
 			}
 		},
 		"metadata": {
@@ -44,8 +44,8 @@
 				},
 				"sparkVersion": "3.3",
 				"nodeCount": 10,
-				"cores": 4,
-				"memory": 28,
+				"cores": 8,
+				"memory": 56,
 				"automaticScaleJobs": false
 			},
 			"sessionKeepAliveTimeout": 30
@@ -109,6 +109,26 @@
 					"])"
 				],
 				"execution_count": 5
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"df = spark.read.format(\"csv\").option(\"header\", True ).load(lz_path)\r\n",
+					"df.write.format(\"delta\").save(raw_path)\r\n",
+					"display(df)"
+				],
+				"execution_count": null
 			},
 			{
 				"cell_type": "code",
