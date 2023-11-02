@@ -1,0 +1,450 @@
+{
+	"name": "Eva_Data_Quality_Utilities",
+	"properties": {
+		"folder": {
+			"name": "data"
+		},
+		"nbformat": 4,
+		"nbformat_minor": 2,
+		"bigDataPool": {
+			"referenceName": "cluster",
+			"type": "BigDataPoolReference"
+		},
+		"sessionProperties": {
+			"driverMemory": "56g",
+			"driverCores": 8,
+			"executorMemory": "56g",
+			"executorCores": 8,
+			"numExecutors": 2,
+			"conf": {
+				"spark.dynamicAllocation.enabled": "false",
+				"spark.dynamicAllocation.minExecutors": "2",
+				"spark.dynamicAllocation.maxExecutors": "2",
+				"spark.autotune.trackingId": "56873d26-b1ec-4a88-babe-db87dd446266"
+			}
+		},
+		"metadata": {
+			"saveOutput": true,
+			"enableDebugMode": false,
+			"kernelspec": {
+				"name": "synapse_pyspark",
+				"display_name": "Synapse PySpark"
+			},
+			"language_info": {
+				"name": "python"
+			},
+			"a365ComputeOptions": {
+				"id": "/subscriptions/9f5c1632-9893-4fdf-b03b-0f2ebd29d77e/resourceGroups/rg_yt_resource_gp_mk/providers/Microsoft.Synapse/workspaces/syanpsepython/bigDataPools/cluster",
+				"name": "cluster",
+				"type": "Spark",
+				"endpoint": "https://syanpsepython.dev.azuresynapse.net/livyApi/versions/2019-11-01-preview/sparkPools/cluster",
+				"auth": {
+					"type": "AAD",
+					"authResource": "https://dev.azuresynapse.net"
+				},
+				"sparkVersion": "3.3",
+				"nodeCount": 10,
+				"cores": 8,
+				"memory": 56,
+				"automaticScaleJobs": false
+			},
+			"sessionKeepAliveTimeout": 30
+		},
+		"cells": [
+			{
+				"cell_type": "code",
+				"source": [
+					"from enum import Enum, unique\r\n",
+					"from typing import Any, List, Optional, Union\r\n",
+					"import pyspark.sql.functions as F\r\n",
+					"from pyspark.sql.functions import col, lit\r\n",
+					"from pyspark.sql import Column, DataFrame, Window\r\n",
+					"from pyspark.sql.window import Window\r\n",
+					"from typing import Any, Callable, List, NoReturn, Optional, TypeVar, cast\r\n",
+					"from pyspark.sql.functions import row_number\r\n",
+					"from pyspark.sql import SparkSession\r\n",
+					"import datetime"
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"DQ_RESULTS = \"__data_quality\"\r\n",
+					"_check_counter = 0\r\n",
+					"print(\"dq testing\")"
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"def check_column_is_numeric(\r\n",
+					"    df :DataFrame,\r\n",
+					"    column_name :str,\r\n",
+					"    filter_condition: Union[str, Column, None] = None,\r\n",
+					"):\r\n",
+					"    expected_condition = F.col(column_name).rlike(r\"^[0-9]*\\.?[0-9]*([Ee][+-]?[0-9]+)?$\")\r\n",
+					"    error_message = F.concat(\r\n",
+					"            F.lit(f\"CHECK_NUMERIC: Column `{column_name}` has value \"),\r\n",
+					"            F.col(column_name).cast(\"string\"),\r\n",
+					"            F.lit(\", which is not a numeric value\"),\r\n",
+					"    )\r\n",
+					"    return check_dq_conditions(\r\n",
+					"        df = df,\r\n",
+					"        expected_condition=expected_condition,\r\n",
+					"        error_message=error_message,\r\n",
+					"        filter_condition=filter_condition,\r\n",
+					"    )\r\n",
+					""
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"#function to check the field value is in correct date\r\n",
+					"\r\n",
+					"def check_column_date_type_cast(\r\n",
+					"        df :DataFrame,\r\n",
+					"        column_name: str,\r\n",
+					"        date_format: str,\r\n",
+					"        filter_condition: Union[str, Column, None] = None,      \r\n",
+					"):\r\n",
+					"    CHECK_CAST_COLUMN = \"__value_after_cast\"\r\n",
+					"    # date_format = 'yyMMddHHmmss'\r\n",
+					"    data_type = 'timestamp'\r\n",
+					"    if not column_name:\r\n",
+					"            raise ValueError(\"Invalid column name\")\r\n",
+					"    else:\r\n",
+					"        df = df.withColumn(\r\n",
+					"            CHECK_CAST_COLUMN,\r\n",
+					"            F.to_timestamp(F.col(column_name).cast(\"string\"), date_format),  # type: ignore[arg-type]\r\n",
+					"        )\r\n",
+					" \r\n",
+					"    expected_condition = F.col(CHECK_CAST_COLUMN).isNotNull() | F.col(column_name).isNull()\r\n",
+					"\r\n",
+					"    error_message = F.concat(\r\n",
+					"        F.lit(f\"CHECK_TYPE_CAST: Column `{column_name}` has value \"),\r\n",
+					"        F.col(column_name).cast(\"string\"),\r\n",
+					"        F.lit(f\", which cannot be safely cast to type {data_type}\"),\r\n",
+					"        F.lit(f\" using format {date_format}\") if data_type in [\"date\", \"timestamp\"] else F.lit(\"\"),\r\n",
+					"    )\r\n",
+					"\r\n",
+					"    return check_dq_conditions(\r\n",
+					"        df = df,\r\n",
+					"        expected_condition=expected_condition,\r\n",
+					"        error_message=error_message,\r\n",
+					"        filter_condition=filter_condition,\r\n",
+					"    )\r\n",
+					""
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"def check_dq_conditions(\r\n",
+					"        df : DataFrame,\r\n",
+					"        expected_condition: Union[str, Column],\r\n",
+					"        error_message: Union[str, Column],\r\n",
+					"        filter_condition: Union[str, Column, None] = None,\r\n",
+					"):\r\n",
+					"        global _check_counter\r\n",
+					"\r\n",
+					"        if isinstance(error_message, str):\r\n",
+					"            error_message = F.lit(error_message)\r\n",
+					"\r\n",
+					"        if isinstance(expected_condition, str):\r\n",
+					"            expected_condition = F.expr(expected_condition)\r\n",
+					"\r\n",
+					"        if filter_condition is None:\r\n",
+					"            filter_condition = F.expr(\"1 = 1\")\r\n",
+					"        elif isinstance(filter_condition, str):\r\n",
+					"            filter_condition = F.expr(filter_condition)\r\n",
+					"\r\n",
+					"        _check_counter += 1\r\n",
+					"        df = df.withColumn(\r\n",
+					"            f\"{DQ_RESULTS}_{_check_counter}\",\r\n",
+					"            F.when(filter_condition & ~expected_condition, error_message)\r\n",
+					"            .otherwise(F.lit(None).cast(\"string\"))\r\n",
+					"        )\r\n",
+					"        return df  \r\n",
+					""
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"#function to check the duplicate value \r\n",
+					"def check_duplicate_in_columns(\r\n",
+					"    df: DataFrame,\r\n",
+					"    filter_condition: Union[str, Column, None] = None,\r\n",
+					"    column_names: List[str] =[]\r\n",
+					"):\r\n",
+					"    #global df\r\n",
+					"    #column_names = [\"col1\",\"col2\"]\r\n",
+					"\r\n",
+					"    #using window function to get the duplicate count\r\n",
+					"    df = df.withColumn(\"__duplicate_count\", F.count(\"*\").over(Window.partitionBy(*column_names)))\r\n",
+					"\r\n",
+					"    #getting the rownumber for the columns on which we need to validate the duplicate values\r\n",
+					"    df = df.withColumn(\"__row_number\", row_number().over(Window.partitionBy(*column_names).orderBy(column_names[1])))\r\n",
+					"    \r\n",
+					"    expected_condition = (F.col(\"__duplicate_count\") == 1) | (F.col(\"__row_number\") == 1)\r\n",
+					"    formatted_columns = \", \".join([f\"`{col}`\" for col in column_names])\r\n",
+					"    error_message= F.concat(F.lit(f\"CHECK_UNIQUE: Column(s) {formatted_columns} has value (\"),\r\n",
+					"                    F.concat_ws(\", \", *column_names),\r\n",
+					"                    F.lit(\"), which is a duplicate value\"))\r\n",
+					"    return check_dq_conditions(\r\n",
+					"        df = df,\r\n",
+					"        expected_condition=expected_condition,\r\n",
+					"        error_message=error_message,\r\n",
+					"        filter_condition=filter_condition,\r\n",
+					"    )"
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"#function to check the value is not null \r\n",
+					"\r\n",
+					"def check_column_is_not_null(\r\n",
+					"    df : DataFrame, \r\n",
+					"    column_name :str,\r\n",
+					"    filter_condition: Union[str, Column, None] = None,\r\n",
+					"):\r\n",
+					"    expected_condition = F.col(column_name).isNotNull()\r\n",
+					"    error_message= f\"CHECK_NOT_NULL: Column `{column_name}` is null\"\r\n",
+					"    return check_dq_conditions(\r\n",
+					"        df = df,\r\n",
+					"        expected_condition=expected_condition,\r\n",
+					"        error_message=error_message,\r\n",
+					"        filter_condition=filter_condition,\r\n",
+					"    )\r\n",
+					""
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"def build_df(\r\n",
+					"    df : DataFrame\r\n",
+					") -> DataFrame:\r\n",
+					"        \"\"\"Obtain the resulting DataFrame with data quality checks applied.\r\n",
+					"\r\n",
+					"        Returns\r\n",
+					"        -------\r\n",
+					"        DataFrame\r\n",
+					"            The modified PySpark DataFrame with updated validation results.\r\n",
+					"        \"\"\"\r\n",
+					"        temp_dq_cols = [c for c in df.columns if c.startswith(DQ_RESULTS + \"_\")]\r\n",
+					"        print(temp_dq_cols)\r\n",
+					"        df = (\r\n",
+					"            df\r\n",
+					"            .withColumn(\r\n",
+					"                DQ_RESULTS,\r\n",
+					"                F.filter(F.array(*temp_dq_cols), lambda c: c.isNotNull())\r\n",
+					"            )\r\n",
+					"            .withColumn(\r\n",
+					"                DQ_RESULTS,\r\n",
+					"                F.when(F.size(DQ_RESULTS) == 0, F.lit(None))\r\n",
+					"                .otherwise(F.col(DQ_RESULTS))\r\n",
+					"            )\r\n",
+					"            .drop(*temp_dq_cols)\r\n",
+					"        )  # fmt: skip\r\n",
+					"        return df"
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"\"\"\"\r\n",
+					"splitting the data frame in where records are correct after validation and in one dataframe\r\n",
+					"where records having duplicate , null or incorrect date as per the DQ Validation\r\n",
+					"\r\n",
+					"\"\"\"\r\n",
+					"from typing import Tuple\r\n",
+					"def split_dataframe_by_dataquality(temp) -> Tuple:\r\n",
+					"\r\n",
+					"    \"\"\"\r\n",
+					"    Splits the input PySpark dataframe into two dataframes: error_df for rows with dq issues and clean_df for rows without dq issues.\r\n",
+					"    \"\"\"\r\n",
+					"\r\n",
+					"    cols_to_drop = [\"__duplicate_count\", \"__row_number\"]\r\n",
+					"    for col_name in cols_to_drop:\r\n",
+					"        if col_name in temp.columns:\r\n",
+					"            temp = temp.drop(col_name)\r\n",
+					"    error_df = temp.filter(col(\"__data_quality\").isNotNull())\r\n",
+					"    clean_df = temp.filter(col(\"__data_quality\").isNull()).drop(\"__data_quality\")\r\n",
+					"\r\n",
+					"    return (error_df, clean_df)"
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"\r\n",
+					"def list_non_metadata_columns(df: DataFrame) -> List[str]:\r\n",
+					"    return [col for col in df.columns if not col.startswith(\"__\")]"
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"#need to test this function to add empty list logic\r\n",
+					"def run_data_quality_checks( dq_rules :{},df=  DataFrame):\r\n",
+					"    df = df\r\n",
+					"    print(\"started\")\r\n",
+					"    for dq_rule_name, Col_names in dq_rules.items():\r\n",
+					"        # look up the actual function by name in the function_dict\r\n",
+					"        if (dq_rule_name == \"check_duplicate_in_columns\"):\r\n",
+					"            #checking duplicate vlaues for all the columns\r\n",
+					"            if not Col_names or \"All\" in Col_names: \r\n",
+					"                col_list= list_non_metadata_columns(df =df)\r\n",
+					"                df = check_duplicate_in_columns(df= df, column_names = col_list)\r\n",
+					"            else :\r\n",
+					"                df = check_duplicate_in_columns(df= df, column_names = Col_names)\r\n",
+					"        elif (dq_rule_name == \"check_column_is_not_null\"):\r\n",
+					"            #checking column value is not null\r\n",
+					"            for column in Col_names:\r\n",
+					"                #Col_name = Col_names.pop()\r\n",
+					"                df= check_column_is_not_null(df= df, column_name = column)\r\n",
+					"        elif (dq_rule_name == \"check_column_is_numeric\"):\r\n",
+					"            #checking column is numeric\r\n",
+					"            for column in Col_names:\r\n",
+					"                #Col_name = Col_names.pop()\r\n",
+					"                df= check_column_is_numeric(df= df, column_name = column)\r\n",
+					"        elif (dq_rule_name == \"check_column_date_type_cast\"):\r\n",
+					"            #checking date field having correct date \r\n",
+					"            for column_name,column_format in Col_names.items():\r\n",
+					"                #Col_name = Col_names.pop()\r\n",
+					"                df= check_column_date_type_cast(df= df, column_name = column_name,date_format =column_format )\r\n",
+					"                df = df.drop(\"__value_after_cast\")\r\n",
+					"    df = build_df(df)\r\n",
+					"    print(\"end\")\r\n",
+					"    error_df,clean_df = split_dataframe_by_dataquality(df)\r\n",
+					"    return error_df,clean_df\r\n",
+					""
+				],
+				"execution_count": 4
+			}
+		]
+	}
+}
