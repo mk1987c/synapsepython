@@ -20,7 +20,7 @@
 				"spark.dynamicAllocation.enabled": "false",
 				"spark.dynamicAllocation.minExecutors": "2",
 				"spark.dynamicAllocation.maxExecutors": "2",
-				"spark.autotune.trackingId": "b769a768-c390-48e3-aa7e-f5f8816f31aa"
+				"spark.autotune.trackingId": "9ef5daf1-a074-44be-a1d7-cc15fa77e6e0"
 			}
 		},
 		"metadata": {
@@ -55,10 +55,11 @@
 				"cell_type": "code",
 				"source": [
 					"from pyspark.sql import SparkSession\r\n",
+					"from pyspark.sql import Row\r\n",
 					"from pyspark.sql.types import StructType, StructField, StringType\r\n",
-					"from pyspark.sql import Row"
+					""
 				],
-				"execution_count": 24
+				"execution_count": 18
 			},
 			{
 				"cell_type": "code",
@@ -75,9 +76,12 @@
 				},
 				"source": [
 					"from com.dataengineering.writer_utils import writer\r\n",
-					"from com.dataengineering.reader_utils import reader"
+					"from com.dataengineering.reader_utils import reader\r\n",
+					"spark = SparkSession.builder.appName(\"SimpleDataFrameExample\").getOrCreate()\r\n",
+					"reader = reader(spark)\r\n",
+					"writer = writer(spark)"
 				],
-				"execution_count": 36
+				"execution_count": 19
 			},
 			{
 				"cell_type": "code",
@@ -93,12 +97,11 @@
 					}
 				},
 				"source": [
-					"spark = SparkSession.builder.appName(\"SimpleDataFrameExample\").getOrCreate()\r\n",
 					"lz_path  = f\"abfss://landingzoneraw@sasyanpse.dfs.core.windows.net/lz_zone/*\"\r\n",
 					"raw_path  = f\"abfss://landingzoneraw@sasyanpse.dfs.core.windows.net/raw_zone/values/\"\r\n",
 					"ck_path  = f\"abfss://landingzoneraw@sasyanpse.dfs.core.windows.net/raw_zone/values_checkpoint/\""
 				],
-				"execution_count": 26
+				"execution_count": 20
 			},
 			{
 				"cell_type": "code",
@@ -127,50 +130,7 @@
 					"    StructField(\"Value\", StringType(), True)\r\n",
 					"])"
 				],
-				"execution_count": 27
-			},
-			{
-				"cell_type": "code",
-				"metadata": {
-					"jupyter": {
-						"source_hidden": false,
-						"outputs_hidden": false
-					},
-					"nteract": {
-						"transient": {
-							"deleting": false
-						}
-					},
-					"collapsed": false
-				},
-				"source": [
-					"from com.dataengineering import helper_utils\r\n",
-					"helper = helper_utils.helper(spark)\r\n",
-					"df_lk = helper.replace_null_with_ones(df,[\"name\"])\r\n",
-					"display(df_lk)\r\n",
-					""
-				],
-				"execution_count": 5
-			},
-			{
-				"cell_type": "code",
-				"metadata": {
-					"jupyter": {
-						"source_hidden": false,
-						"outputs_hidden": false
-					},
-					"nteract": {
-						"transient": {
-							"deleting": false
-						}
-					},
-					"collapsed": false
-				},
-				"source": [
-					"df = spark.read.format(\"csv\").load(f\"abfss://landingzoneraw@sasyanpse.dfs.core.windows.net/lz_zone/*\")\r\n",
-					"display(df)"
-				],
-				"execution_count": 1
+				"execution_count": 21
 			},
 			{
 				"cell_type": "code",
@@ -186,19 +146,18 @@
 					}
 				},
 				"source": [
-					"\r\n",
-					"reader = reader(spark)\r\n",
 					"df = reader.read_streaming_data(\r\n",
 					"    file_format=\"csv\",\r\n",
 					"    max_files_per_trigger=1,\r\n",
-					"    file_extension=\"csv\",\r\n",
+					"    file_extension=\"*.csv\",\r\n",
 					"    delimiter=\",\",\r\n",
 					"    schema = schema,\r\n",
+					"    csv_header = True,\r\n",
 					"    path= lz_path\r\n",
 					"    )\r\n",
 					""
 				],
-				"execution_count": 28
+				"execution_count": 23
 			},
 			{
 				"cell_type": "code",
@@ -214,31 +173,13 @@
 					}
 				},
 				"source": [
-					"writer = writer(spark)"
-				],
-				"execution_count": 37
-			},
-			{
-				"cell_type": "code",
-				"metadata": {
-					"jupyter": {
-						"source_hidden": false,
-						"outputs_hidden": false
-					},
-					"nteract": {
-						"transient": {
-							"deleting": false
-						}
-					}
-				},
-				"source": [
-					"writer.write_streaming_data(\r\n",
-					"    df,\r\n",
-					"    raw_path, \r\n",
-					"    '2 seconds'\r\n",
+					"query = writer.write_streaming_data(\r\n",
+					"    df= df,\r\n",
+					"    path = raw_path, \r\n",
+					"    processing_time='2 seconds'\r\n",
 					"    )"
 				],
-				"execution_count": 45
+				"execution_count": 24
 			},
 			{
 				"cell_type": "code",
@@ -254,9 +195,9 @@
 					}
 				},
 				"source": [
-					""
+					"query.isActive"
 				],
-				"execution_count": null
+				"execution_count": 27
 			}
 		]
 	}
