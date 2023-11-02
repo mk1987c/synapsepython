@@ -20,7 +20,7 @@
 				"spark.dynamicAllocation.enabled": "false",
 				"spark.dynamicAllocation.minExecutors": "2",
 				"spark.dynamicAllocation.maxExecutors": "2",
-				"spark.autotune.trackingId": "6ae4a108-95e6-449d-8e31-0b56862a57fd"
+				"spark.autotune.trackingId": "195160e5-47d2-4c7d-a1fb-a19532033f51"
 			}
 		},
 		"metadata": {
@@ -88,7 +88,7 @@
 					"df = spark.createDataFrame(data, schema)\r\n",
 					""
 				],
-				"execution_count": 2
+				"execution_count": 5
 			},
 			{
 				"cell_type": "code",
@@ -106,7 +106,7 @@
 				"source": [
 					"%run data/Data_Quality_Utilities"
 				],
-				"execution_count": 3
+				"execution_count": 4
 			},
 			{
 				"cell_type": "code",
@@ -122,11 +122,32 @@
 					}
 				},
 				"source": [
-					"dq_check = {\"check_column_is_not_null\": [\"Units\"]}\r\n",
-					"df, df_err = run_data_quality_checks(dq_check, df)\r\n",
+					"display(df)\r\n",
 					""
 				],
 				"execution_count": null
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": false
+				},
+				"source": [
+					"dq_check = {\"check_column_is_not_null\": [\"name\"]}\r\n",
+					"df, df_err = run_data_quality_checks(dq_check, df)\r\n",
+					"display(df)\r\n",
+					""
+				],
+				"execution_count": 8
 			}
 		]
 	}
