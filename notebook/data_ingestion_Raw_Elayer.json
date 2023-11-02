@@ -11,16 +11,16 @@
 			"type": "BigDataPoolReference"
 		},
 		"sessionProperties": {
-			"driverMemory": "56g",
-			"driverCores": 8,
-			"executorMemory": "56g",
-			"executorCores": 8,
+			"driverMemory": "28g",
+			"driverCores": 4,
+			"executorMemory": "28g",
+			"executorCores": 4,
 			"numExecutors": 2,
 			"conf": {
 				"spark.dynamicAllocation.enabled": "false",
 				"spark.dynamicAllocation.minExecutors": "2",
 				"spark.dynamicAllocation.maxExecutors": "2",
-				"spark.autotune.trackingId": "5f8db2f2-2a99-4aac-934d-a09196df39b2"
+				"spark.autotune.trackingId": "b4a69cc3-b95d-4a66-a2b2-14681eefe81d"
 			}
 		},
 		"metadata": {
@@ -61,7 +61,7 @@
 					"from com.dataengineering.writer_utils import writer\r\n",
 					"from com.dataengineering.helper_utils import helper"
 				],
-				"execution_count": 13
+				"execution_count": 1
 			},
 			{
 				"cell_type": "code",

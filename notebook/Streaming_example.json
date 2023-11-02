@@ -7,7 +7,7 @@
 		"nbformat": 4,
 		"nbformat_minor": 2,
 		"bigDataPool": {
-			"referenceName": "cluster",
+			"referenceName": "testcluster",
 			"type": "BigDataPoolReference"
 		},
 		"sessionProperties": {
@@ -20,7 +20,7 @@
 				"spark.dynamicAllocation.enabled": "false",
 				"spark.dynamicAllocation.minExecutors": "2",
 				"spark.dynamicAllocation.maxExecutors": "2",
-				"spark.autotune.trackingId": "e34451dc-282b-4909-9403-97c2fe7fcfbb"
+				"spark.autotune.trackingId": "b4e8df56-ed7a-402d-a111-a421c384270a"
 			}
 		},
 		"metadata": {
@@ -34,10 +34,10 @@
 				"name": "python"
 			},
 			"a365ComputeOptions": {
-				"id": "/subscriptions/9f5c1632-9893-4fdf-b03b-0f2ebd29d77e/resourceGroups/rg_yt_resource_gp_mk/providers/Microsoft.Synapse/workspaces/syanpsepython/bigDataPools/cluster",
-				"name": "cluster",
+				"id": "/subscriptions/9f5c1632-9893-4fdf-b03b-0f2ebd29d77e/resourceGroups/rg_yt_resource_gp_mk/providers/Microsoft.Synapse/workspaces/syanpsepython/bigDataPools/testcluster",
+				"name": "testcluster",
 				"type": "Spark",
-				"endpoint": "https://syanpsepython.dev.azuresynapse.net/livyApi/versions/2019-11-01-preview/sparkPools/cluster",
+				"endpoint": "https://syanpsepython.dev.azuresynapse.net/livyApi/versions/2019-11-01-preview/sparkPools/testcluster",
 				"auth": {
 					"type": "AAD",
 					"authResource": "https://dev.azuresynapse.net"
@@ -59,7 +59,7 @@
 					"from pyspark.sql import Row\r\n",
 					""
 				],
-				"execution_count": 3
+				"execution_count": 1
 			},
 			{
 				"cell_type": "code",
@@ -79,7 +79,7 @@
 					"raw_path  = f\"abfss://landingzoneraw@sasyanpse.dfs.core.windows.net/raw_zone/values/\"\r\n",
 					"ck_path  = f\"abfss://landingzoneraw@sasyanpse.dfs.core.windows.net/raw_zone/values_checkpoint/\""
 				],
-				"execution_count": 6
+				"execution_count": 2
 			},
 			{
 				"cell_type": "code",
