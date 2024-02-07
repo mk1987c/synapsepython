@@ -1,0 +1,50 @@
+{
+	"name": "concept_pipeline",
+	"properties": {
+		"activities": [
+			{
+				"name": "pipeline_monitor link",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "pipeline_monitor",
+					"value": {
+						"value": "@concat('https://web.azuresynapse.net/en/monitoring/pipelineruns/',pipeline().RunId,'?workspace=%2Fsubscriptions%2F','%2Fproviders%2FMicrosoft.Synapse%2Fworkspaces%2F',pipeline().DataFactory)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "pipeline run id",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "run_id",
+					"value": {
+						"value": "@pipeline().RunId",
+						"type": "Expression"
+					}
+				}
+			}
+		],
+		"variables": {
+			"pipeline_monitor": {
+				"type": "String"
+			},
+			"run_id": {
+				"type": "String"
+			}
+		},
+		"annotations": []
+	}
+}
