@@ -1,0 +1,17 @@
+{
+	"name": "dummyscripts",
+	"properties": {
+		"content": {
+			"query": "CREATE DATABASE DataExplorationDB \n                COLLATE Latin1_General_100_BIN2_UTF8\n\n\nUSE DataExplorationDB\n\n\n",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "DataExplorationDB",
+				"poolName": "Built-in"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}
