@@ -12,7 +12,13 @@
 						"referenceName": "child_pipeline",
 						"type": "PipelineReference"
 					},
-					"waitOnCompletion": true
+					"waitOnCompletion": true,
+					"parameters": {
+						"parent_pipeline_id": {
+							"value": "@pipeline()?.TriggeredByPipelineRunId",
+							"type": "Expression"
+						}
+					}
 				}
 			}
 		],
