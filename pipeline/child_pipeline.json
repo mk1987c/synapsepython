@@ -20,6 +20,11 @@
 				}
 			}
 		],
+		"parameters": {
+			"pipeline_id": {
+				"type": "string"
+			}
+		},
 		"variables": {
 			"group_id": {
 				"type": "String"
