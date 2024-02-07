@@ -1,0 +1,30 @@
+{
+	"name": "child_pipeline",
+	"properties": {
+		"activities": [
+			{
+				"name": "Set variable1",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "group_id",
+					"value": {
+						"value": "@pipeline().GroupId",
+						"type": "Expression"
+					}
+				}
+			}
+		],
+		"variables": {
+			"group_id": {
+				"type": "String"
+			}
+		},
+		"annotations": []
+	}
+}
