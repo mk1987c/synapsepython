@@ -22,13 +22,125 @@
 	},
 	"resources": [
 		{
-			"name": "[concat(parameters('workspaceName'), '/cluster')]",
-			"type": "Microsoft.Synapse/workspaces/bigDataPools",
+			"name": "[concat(parameters('workspaceName'), '/concept_pipeline')]",
+			"type": "Microsoft.Synapse/workspaces/pipelines",
 			"apiVersion": "2019-06-01-preview",
 			"properties": {
+				"activities": [
+					{
+						"name": "pipeline_monitor link",
+						"type": "SetVariable",
+						"dependsOn": [],
+						"policy": {
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"variableName": "pipeline_monitor",
+							"value": {
+								"value": "@concat('https://web.azuresynapse.net/en/monitoring/pipelineruns/',pipeline().RunId,\n    '?workspace=%2Fsubscriptions%2F',\n    pipeline().parameters.subscription_id,\n    '%2FresourceGroups%2F',\n    pipeline().parameters.resource_group,\n    '%2Fproviders%2FMicrosoft.Synapse%2Fworkspaces%2F',\n    pipeline().DataFactory)",
+								"type": "Expression"
+							}
+						}
+					},
+					{
+						"name": "pipeline run id",
+						"type": "SetVariable",
+						"dependsOn": [],
+						"policy": {
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"variableName": "run_id",
+							"value": {
+								"value": "@pipeline().RunId",
+								"type": "Expression"
+							}
+						}
+					},
+					{
+						"name": "getPipelinestatus",
+						"type": "WebActivity",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"method": "POST",
+							"headers": {},
+							"url": {
+								"value": "https://@{pipeline().parameters.synapse_workspace}.azuresynapse.net/queryPipelineRuns?api-version=2020-12-01",
+								"type": "Expression"
+							},
+							"connectVia": {
+								"referenceName": "AutoResolveIntegrationRuntime",
+								"type": "IntegrationRuntimeReference"
+							},
+							"body": {
+								"value": "{\"lastUpdatedAfter\":\"@addDays(utcNow(),-15)}",
+								"type": "Expression"
+							}
+						}
+					},
+					{
+						"name": "getPipelineName",
+						"type": "SetVariable",
+						"dependsOn": [],
+						"policy": {
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"variableName": "pipeline_name",
+							"value": {
+								"value": "@pipeline().Pipeline",
+								"type": "Expression"
+							}
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"parameters": {
+					"subscription_id": {
+						"type": "string",
+						"defaultValue": "9f5c1632-9893-4fdf-b03b-0f2ebd29d77e"
+					},
+					"resource_group": {
+						"type": "string",
+						"defaultValue": "rg_yt_resource_gp_mk"
+					},
+					"synapse_workspace": {
+						"type": "string",
+						"defaultValue": "web"
+					}
+				},
+				"variables": {
+					"pipeline_monitor": {
+						"type": "String"
+					},
+					"run_id": {
+						"type": "String"
+					},
+					"pipeline_name": {
+						"type": "String"
+					}
+				},
 				"annotations": []
 			},
-			"dependsOn": []
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
 		},
 		{
 			"name": "[concat(parameters('workspaceName'), '/syanpsepython-WorkspaceDefaultSqlServer')]",
@@ -103,7 +215,7 @@
 			"dependsOn": []
 		},
 		{
-			"name": "[concat(parameters('workspaceName'), '/data_ingestion')]",
+			"name": "[concat(parameters('workspaceName'), '/Data_Quality_Utilities')]",
 			"type": "Microsoft.Synapse/workspaces/notebooks",
 			"apiVersion": "2019-06-01-preview",
 			"properties": {
@@ -126,7 +238,470 @@
 						"spark.dynamicAllocation.enabled": "false",
 						"spark.dynamicAllocation.minExecutors": "2",
 						"spark.dynamicAllocation.maxExecutors": "2",
-						"spark.autotune.trackingId": "b0391655-00cf-42dc-8c49-1a4c7953f5f9"
+						"spark.autotune.trackingId": "6fcadab3-c1da-41ae-99a4-40c792b9b818"
+					}
+				},
+				"metadata": {
+					"saveOutput": true,
+					"enableDebugMode": false,
+					"kernelspec": {
+						"name": "synapse_pyspark",
+						"display_name": "Synapse PySpark"
+					},
+					"language_info": {
+						"name": "python"
+					},
+					"a365ComputeOptions": {
+						"id": "/subscriptions/9f5c1632-9893-4fdf-b03b-0f2ebd29d77e/resourceGroups/rg_yt_resource_gp_mk/providers/Microsoft.Synapse/workspaces/syanpsepython/bigDataPools/cluster",
+						"name": "cluster",
+						"type": "Spark",
+						"endpoint": "https://syanpsepython.dev.azuresynapse.net/livyApi/versions/2019-11-01-preview/sparkPools/cluster",
+						"auth": {
+							"type": "AAD",
+							"authResource": "https://dev.azuresynapse.net"
+						},
+						"sparkVersion": "3.3",
+						"nodeCount": 10,
+						"cores": 8,
+						"memory": 56
+					},
+					"sessionKeepAliveTimeout": 30
+				},
+				"cells": [
+					{
+						"cell_type": "code",
+						"source": [
+							"from enum import Enum, unique\r\n",
+							"from typing import Any, List, Optional, Union\r\n",
+							"import pyspark.sql.functions as F\r\n",
+							"from pyspark.sql.functions import col, lit\r\n",
+							"from pyspark.sql import Column, DataFrame, Window\r\n",
+							"from pyspark.sql.window import Window\r\n",
+							"from typing import Any, Callable, List, NoReturn, Optional, TypeVar, cast\r\n",
+							"from pyspark.sql.functions import row_number\r\n",
+							"from pyspark.sql import SparkSession\r\n",
+							"import datetime"
+						],
+						"outputs": [],
+						"execution_count": null
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"DQ_RESULTS = \"__data_quality\"\r\n",
+							"_check_counter = 0\r\n",
+							"print(\"dq testing\")"
+						],
+						"outputs": [],
+						"execution_count": null
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"def check_column_is_numeric(\r\n",
+							"    df :DataFrame,\r\n",
+							"    column_name :str,\r\n",
+							"    filter_condition: Union[str, Column, None] = None,\r\n",
+							"):\r\n",
+							"    expected_condition = F.col(column_name).rlike(r\"^[0-9]*\\.?[0-9]*([Ee][+-]?[0-9]+)?$\")\r\n",
+							"    error_message = F.concat(\r\n",
+							"            F.lit(f\"CHECK_NUMERIC: Column `{column_name}` has value \"),\r\n",
+							"            F.col(column_name).cast(\"string\"),\r\n",
+							"            F.lit(\", which is not a numeric value\"),\r\n",
+							"    )\r\n",
+							"    return check_dq_conditions(\r\n",
+							"        df = df,\r\n",
+							"        expected_condition=expected_condition,\r\n",
+							"        error_message=error_message,\r\n",
+							"        filter_condition=filter_condition,\r\n",
+							"    )\r\n",
+							""
+						],
+						"outputs": [],
+						"execution_count": null
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"#function to check the field value is in correct date\r\n",
+							"\r\n",
+							"def check_column_date_type_cast(\r\n",
+							"        df :DataFrame,\r\n",
+							"        column_name: str,\r\n",
+							"        date_format: str,\r\n",
+							"        filter_condition: Union[str, Column, None] = None,      \r\n",
+							"):\r\n",
+							"    CHECK_CAST_COLUMN = \"__value_after_cast\"\r\n",
+							"    # date_format = 'yyMMddHHmmss'\r\n",
+							"    data_type = 'timestamp'\r\n",
+							"    if not column_name:\r\n",
+							"            raise ValueError(\"Invalid column name\")\r\n",
+							"    else:\r\n",
+							"        df = df.withColumn(\r\n",
+							"            CHECK_CAST_COLUMN,\r\n",
+							"            F.to_timestamp(F.col(column_name).cast(\"string\"), date_format),  # type: ignore[arg-type]\r\n",
+							"        )\r\n",
+							" \r\n",
+							"    expected_condition = F.col(CHECK_CAST_COLUMN).isNotNull() | F.col(column_name).isNull()\r\n",
+							"\r\n",
+							"    error_message = F.concat(\r\n",
+							"        F.lit(f\"CHECK_TYPE_CAST: Column `{column_name}` has value \"),\r\n",
+							"        F.col(column_name).cast(\"string\"),\r\n",
+							"        F.lit(f\", which cannot be safely cast to type {data_type}\"),\r\n",
+							"        F.lit(f\" using format {date_format}\") if data_type in [\"date\", \"timestamp\"] else F.lit(\"\"),\r\n",
+							"    )\r\n",
+							"\r\n",
+							"    return check_dq_conditions(\r\n",
+							"        df = df,\r\n",
+							"        expected_condition=expected_condition,\r\n",
+							"        error_message=error_message,\r\n",
+							"        filter_condition=filter_condition,\r\n",
+							"    )\r\n",
+							""
+						],
+						"outputs": [],
+						"execution_count": null
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"def check_dq_conditions(\r\n",
+							"        df : DataFrame,\r\n",
+							"        expected_condition: Union[str, Column],\r\n",
+							"        error_message: Union[str, Column],\r\n",
+							"        filter_condition: Union[str, Column, None] = None,\r\n",
+							"):\r\n",
+							"        global _check_counter\r\n",
+							"\r\n",
+							"        if isinstance(error_message, str):\r\n",
+							"            error_message = F.lit(error_message)\r\n",
+							"\r\n",
+							"        if isinstance(expected_condition, str):\r\n",
+							"            expected_condition = F.expr(expected_condition)\r\n",
+							"\r\n",
+							"        if filter_condition is None:\r\n",
+							"            filter_condition = F.expr(\"1 = 1\")\r\n",
+							"        elif isinstance(filter_condition, str):\r\n",
+							"            filter_condition = F.expr(filter_condition)\r\n",
+							"\r\n",
+							"        _check_counter += 1\r\n",
+							"        df = df.withColumn(\r\n",
+							"            f\"{DQ_RESULTS}_{_check_counter}\",\r\n",
+							"            F.when(filter_condition & ~expected_condition, error_message)\r\n",
+							"            .otherwise(F.lit(None).cast(\"string\"))\r\n",
+							"        )\r\n",
+							"        return df  \r\n",
+							""
+						],
+						"outputs": [],
+						"execution_count": null
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"#function to check the duplicate value \r\n",
+							"def check_duplicate_in_columns(\r\n",
+							"    df: DataFrame,\r\n",
+							"    filter_condition: Union[str, Column, None] = None,\r\n",
+							"    column_names: List[str] =[]\r\n",
+							"):\r\n",
+							"    #global df\r\n",
+							"    #column_names = [\"col1\",\"col2\"]\r\n",
+							"\r\n",
+							"    #using window function to get the duplicate count\r\n",
+							"    df = df.withColumn(\"__duplicate_count\", F.count(\"*\").over(Window.partitionBy(*column_names)))\r\n",
+							"\r\n",
+							"    #getting the rownumber for the columns on which we need to validate the duplicate values\r\n",
+							"    df = df.withColumn(\"__row_number\", row_number().over(Window.partitionBy(*column_names).orderBy(column_names[1])))\r\n",
+							"    \r\n",
+							"    expected_condition = (F.col(\"__duplicate_count\") == 1) | (F.col(\"__row_number\") == 1)\r\n",
+							"    formatted_columns = \", \".join([f\"`{col}`\" for col in column_names])\r\n",
+							"    error_message= F.concat(F.lit(f\"CHECK_UNIQUE: Column(s) {formatted_columns} has value (\"),\r\n",
+							"                    F.concat_ws(\", \", *column_names),\r\n",
+							"                    F.lit(\"), which is a duplicate value\"))\r\n",
+							"    return check_dq_conditions(\r\n",
+							"        df = df,\r\n",
+							"        expected_condition=expected_condition,\r\n",
+							"        error_message=error_message,\r\n",
+							"        filter_condition=filter_condition,\r\n",
+							"    )"
+						],
+						"outputs": [],
+						"execution_count": null
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"#function to check the value is not null \r\n",
+							"\r\n",
+							"def check_column_is_not_null(\r\n",
+							"    df : DataFrame, \r\n",
+							"    column_name :str,\r\n",
+							"    filter_condition: Union[str, Column, None] = None,\r\n",
+							"):\r\n",
+							"    expected_condition = F.col(column_name).isNotNull()\r\n",
+							"    error_message= f\"CHECK_NOT_NULL: Column `{column_name}` is null\"\r\n",
+							"    return check_dq_conditions(\r\n",
+							"        df = df,\r\n",
+							"        expected_condition=expected_condition,\r\n",
+							"        error_message=error_message,\r\n",
+							"        filter_condition=filter_condition,\r\n",
+							"    )\r\n",
+							""
+						],
+						"outputs": [],
+						"execution_count": null
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"def build_df(\r\n",
+							"    df : DataFrame\r\n",
+							") -> DataFrame:\r\n",
+							"        \"\"\"Obtain the resulting DataFrame with data quality checks applied.\r\n",
+							"\r\n",
+							"        Returns\r\n",
+							"        -------\r\n",
+							"        DataFrame\r\n",
+							"            The modified PySpark DataFrame with updated validation results.\r\n",
+							"        \"\"\"\r\n",
+							"        temp_dq_cols = [c for c in df.columns if c.startswith(DQ_RESULTS + \"_\")]\r\n",
+							"        print(temp_dq_cols)\r\n",
+							"        df = (\r\n",
+							"            df\r\n",
+							"            .withColumn(\r\n",
+							"                DQ_RESULTS,\r\n",
+							"                F.filter(F.array(*temp_dq_cols), lambda c: c.isNotNull())\r\n",
+							"            )\r\n",
+							"            .withColumn(\r\n",
+							"                DQ_RESULTS,\r\n",
+							"                F.when(F.size(DQ_RESULTS) == 0, F.lit(None))\r\n",
+							"                .otherwise(F.col(DQ_RESULTS))\r\n",
+							"            )\r\n",
+							"            .drop(*temp_dq_cols)\r\n",
+							"        )  # fmt: skip\r\n",
+							"        return df"
+						],
+						"outputs": [],
+						"execution_count": null
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"\"\"\"\r\n",
+							"splitting the data frame in where records are correct after validation and in one dataframe\r\n",
+							"where records having duplicate , null or incorrect date as per the DQ Validation\r\n",
+							"\r\n",
+							"\"\"\"\r\n",
+							"from typing import Tuple\r\n",
+							"def split_dataframe_by_dataquality(temp) -> Tuple:\r\n",
+							"\r\n",
+							"    \"\"\"\r\n",
+							"    Splits the input PySpark dataframe into two dataframes: error_df for rows with dq issues and clean_df for rows without dq issues.\r\n",
+							"    \"\"\"\r\n",
+							"\r\n",
+							"    cols_to_drop = [\"__duplicate_count\", \"__row_number\"]\r\n",
+							"    for col_name in cols_to_drop:\r\n",
+							"        if col_name in temp.columns:\r\n",
+							"            temp = temp.drop(col_name)\r\n",
+							"    error_df = temp.filter(col(\"__data_quality\").isNotNull())\r\n",
+							"    clean_df = temp.filter(col(\"__data_quality\").isNull()).drop(\"__data_quality\")\r\n",
+							"\r\n",
+							"    return (error_df, clean_df)"
+						],
+						"outputs": [],
+						"execution_count": null
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"\r\n",
+							"def list_non_metadata_columns(df: DataFrame) -> List[str]:\r\n",
+							"    return [col for col in df.columns if not col.startswith(\"__\")]"
+						],
+						"outputs": [],
+						"execution_count": null
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"#need to test this function to add empty list logic\r\n",
+							"def run_data_quality_checks( dq_rules :{},df=  DataFrame):\r\n",
+							"    df = df\r\n",
+							"    print(\"started\")\r\n",
+							"    for dq_rule_name, Col_names in dq_rules.items():\r\n",
+							"        # look up the actual function by name in the function_dict\r\n",
+							"        if (dq_rule_name == \"check_duplicate_in_columns\"):\r\n",
+							"            #checking duplicate vlaues for all the columns\r\n",
+							"            if not Col_names or \"All\" in Col_names: \r\n",
+							"                col_list= list_non_metadata_columns(df =df)\r\n",
+							"                df = check_duplicate_in_columns(df= df, column_names = col_list)\r\n",
+							"            else :\r\n",
+							"                df = check_duplicate_in_columns(df= df, column_names = Col_names)\r\n",
+							"        elif (dq_rule_name == \"check_column_is_not_null\"):\r\n",
+							"            #checking column value is not null\r\n",
+							"            for column in Col_names:\r\n",
+							"                #Col_name = Col_names.pop()\r\n",
+							"                df= check_column_is_not_null(df= df, column_name = column)\r\n",
+							"        elif (dq_rule_name == \"check_column_is_numeric\"):\r\n",
+							"            #checking column is numeric\r\n",
+							"            for column in Col_names:\r\n",
+							"                #Col_name = Col_names.pop()\r\n",
+							"                df= check_column_is_numeric(df= df, column_name = column)\r\n",
+							"        elif (dq_rule_name == \"check_column_date_type_cast\"):\r\n",
+							"            #checking date field having correct date \r\n",
+							"            for column_name,column_format in Col_names.items():\r\n",
+							"                #Col_name = Col_names.pop()\r\n",
+							"                df= check_column_date_type_cast(df= df, column_name = column_name,date_format =column_format )\r\n",
+							"                df = df.drop(\"__value_after_cast\")\r\n",
+							"    df = build_df(df)\r\n",
+							"    print(\"end\")\r\n",
+							"    error_df,clean_df = split_dataframe_by_dataquality(df)\r\n",
+							"    return error_df,clean_df\r\n",
+							""
+						],
+						"outputs": [],
+						"execution_count": 4
+					}
+				]
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/Streaming_example')]",
+			"type": "Microsoft.Synapse/workspaces/notebooks",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"folder": {
+					"name": "data"
+				},
+				"nbformat": 4,
+				"nbformat_minor": 2,
+				"bigDataPool": {
+					"referenceName": "testcluster",
+					"type": "BigDataPoolReference"
+				},
+				"sessionProperties": {
+					"driverMemory": "28g",
+					"driverCores": 4,
+					"executorMemory": "28g",
+					"executorCores": 4,
+					"numExecutors": 2,
+					"conf": {
+						"spark.dynamicAllocation.enabled": "false",
+						"spark.dynamicAllocation.minExecutors": "2",
+						"spark.dynamicAllocation.maxExecutors": "2",
+						"spark.autotune.trackingId": "b4e8df56-ed7a-402d-a111-a421c384270a"
 					}
 				},
 				"metadata": {
@@ -134,7 +709,806 @@
 					"enableDebugMode": true,
 					"kernelspec": {
 						"name": "synapse_pyspark",
-						"display_name": "python"
+						"display_name": "Synapse PySpark"
+					},
+					"language_info": {
+						"name": "python"
+					},
+					"a365ComputeOptions": {
+						"id": "/subscriptions/9f5c1632-9893-4fdf-b03b-0f2ebd29d77e/resourceGroups/rg_yt_resource_gp_mk/providers/Microsoft.Synapse/workspaces/syanpsepython/bigDataPools/testcluster",
+						"name": "testcluster",
+						"type": "Spark",
+						"endpoint": "https://syanpsepython.dev.azuresynapse.net/livyApi/versions/2019-11-01-preview/sparkPools/testcluster",
+						"auth": {
+							"type": "AAD",
+							"authResource": "https://dev.azuresynapse.net"
+						},
+						"sparkVersion": "3.3",
+						"nodeCount": 10,
+						"cores": 8,
+						"memory": 56
+					},
+					"sessionKeepAliveTimeout": 30
+				},
+				"cells": [
+					{
+						"cell_type": "code",
+						"source": [
+							"from pyspark.sql import SparkSession\r\n",
+							"from pyspark.sql.types import StructType, StructField, StringType\r\n",
+							"from pyspark.sql import Row\r\n",
+							""
+						],
+						"outputs": [],
+						"execution_count": 1
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"lz_path  = f\"abfss://landingzoneraw@sasyanpse.dfs.core.windows.net/lz_zone/*\"\r\n",
+							"raw_path  = f\"abfss://landingzoneraw@sasyanpse.dfs.core.windows.net/raw_zone/values/\"\r\n",
+							"ck_path  = f\"abfss://landingzoneraw@sasyanpse.dfs.core.windows.net/raw_zone/values_checkpoint/\""
+						],
+						"outputs": [],
+						"execution_count": 2
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"schema = StructType([\r\n",
+							"    StructField(\"Year\", StringType(), True),\r\n",
+							"    StructField(\"month\", StringType(), True),\r\n",
+							"    StructField(\"Industry_aggregation_NZSIOC\", StringType(), True),\r\n",
+							"    StructField(\"Industry_code_NZSIOC\", StringType(), True),\r\n",
+							"    StructField(\"Industry_name_NZSIOC\", StringType(), True),\r\n",
+							"    StructField(\"Units\", StringType(), True),\r\n",
+							"    StructField(\"Variable_code\", StringType(), True),\r\n",
+							"    StructField(\"Variable_name\", StringType(), True),\r\n",
+							"    StructField(\"Variable_category\", StringType(), True),\r\n",
+							"    StructField(\"Value\", StringType(), True)\r\n",
+							"])"
+						],
+						"outputs": [],
+						"execution_count": 5
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"df = spark.read.format(\"csv\").option(\"header\", True).load(lz_path)\r\n",
+							"df.write.format(\"delta\").save(raw_path)\r\n",
+							"display(df)"
+						],
+						"outputs": [],
+						"execution_count": null
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"df = spark.readStream.format(\"csv\").option(\"header\", True ).schema(schema).load(lz_path)\r\n",
+							"df.writeStream.format(\"delta\").option(\"path\",raw_path).option(\"checkpointLocation\",ck_path).start()"
+						],
+						"outputs": [],
+						"execution_count": 16
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"df = spark.read.format(\"csv\").option(\"header\", True ).load(f\"abfss://landingzoneraw@sasyanpse.dfs.core.windows.net/lz_zone/*\")\r\n",
+							"display(df.printSchema())"
+						],
+						"outputs": [],
+						"execution_count": 5
+					}
+				]
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/data_ingestion_Lz_Raw')]",
+			"type": "Microsoft.Synapse/workspaces/notebooks",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"folder": {
+					"name": "data"
+				},
+				"nbformat": 4,
+				"nbformat_minor": 2,
+				"bigDataPool": {
+					"referenceName": "testcluster",
+					"type": "BigDataPoolReference"
+				},
+				"sessionProperties": {
+					"driverMemory": "28g",
+					"driverCores": 4,
+					"executorMemory": "28g",
+					"executorCores": 4,
+					"numExecutors": 2,
+					"conf": {
+						"spark.dynamicAllocation.enabled": "false",
+						"spark.dynamicAllocation.minExecutors": "2",
+						"spark.dynamicAllocation.maxExecutors": "2",
+						"spark.autotune.trackingId": "2b706844-1b6a-4bd0-84e3-af5fbb6dcc48"
+					}
+				},
+				"metadata": {
+					"saveOutput": true,
+					"enableDebugMode": true,
+					"kernelspec": {
+						"name": "synapse_pyspark",
+						"display_name": "Synapse PySpark"
+					},
+					"language_info": {
+						"name": "python"
+					},
+					"a365ComputeOptions": {
+						"id": "/subscriptions/9f5c1632-9893-4fdf-b03b-0f2ebd29d77e/resourceGroups/rg_yt_resource_gp_mk/providers/Microsoft.Synapse/workspaces/syanpsepython/bigDataPools/testcluster",
+						"name": "testcluster",
+						"type": "Spark",
+						"endpoint": "https://syanpsepython.dev.azuresynapse.net/livyApi/versions/2019-11-01-preview/sparkPools/testcluster",
+						"auth": {
+							"type": "AAD",
+							"authResource": "https://dev.azuresynapse.net"
+						},
+						"sparkVersion": "3.3",
+						"nodeCount": 10,
+						"cores": 8,
+						"memory": 56
+					},
+					"sessionKeepAliveTimeout": 30
+				},
+				"cells": [
+					{
+						"cell_type": "code",
+						"source": [
+							"from pyspark.sql import SparkSession\r\n",
+							"from pyspark.sql import Row\r\n",
+							"from pyspark.sql.types import StructType, StructField, StringType\r\n",
+							""
+						],
+						"outputs": [],
+						"execution_count": 3
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"from com.dataengineering.writer_utils import writer\r\n",
+							"from com.dataengineering.reader_utils import reader\r\n",
+							"spark = SparkSession.builder.appName(\"SimpleDataFrameExample\").getOrCreate()\r\n",
+							"reader = reader(spark)\r\n",
+							"writer = writer(spark)"
+						],
+						"outputs": [],
+						"execution_count": 32
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"lz_path  = f\"abfss://landingzoneraw@sasyanpse.dfs.core.windows.net/lz_zone/*\"\r\n",
+							"raw_path  = f\"abfss://landingzoneraw@sasyanpse.dfs.core.windows.net/raw_zone/values/\"\r\n",
+							"ck_path  = f\"abfss://landingzoneraw@sasyanpse.dfs.core.windows.net/raw_zone/values_checkpoint/\""
+						],
+						"outputs": [],
+						"execution_count": null
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"schema = StructType([\r\n",
+							"    StructField(\"Year\", StringType(), True),\r\n",
+							"    StructField(\"month\", StringType(), True),\r\n",
+							"    StructField(\"Industry_aggregation_NZSIOC\", StringType(), True),\r\n",
+							"    StructField(\"Industry_code_NZSIOC\", StringType(), True),\r\n",
+							"    StructField(\"Industry_name_NZSIOC\", StringType(), True),\r\n",
+							"    StructField(\"Units\", StringType(), True),\r\n",
+							"    StructField(\"Variable_code\", StringType(), True),\r\n",
+							"    StructField(\"Variable_name\", StringType(), True),\r\n",
+							"    StructField(\"Variable_category\", StringType(), True),\r\n",
+							"    StructField(\"Value\", StringType(), True)\r\n",
+							"])"
+						],
+						"outputs": [],
+						"execution_count": null
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"df = reader.read_streaming_data(\r\n",
+							"    file_format=\"csv\",\r\n",
+							"    max_files_per_trigger=1,\r\n",
+							"    file_extension=\"*.csv\",\r\n",
+							"    delimiter=\",\",\r\n",
+							"    schema = schema,\r\n",
+							"    csv_header = True,\r\n",
+							"    path= lz_path\r\n",
+							"    )\r\n",
+							""
+						],
+						"outputs": [],
+						"execution_count": null
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"query = writer.write_streaming_data(\r\n",
+							"    df= df,\r\n",
+							"    path = raw_path, \r\n",
+							"    processing_time='2 seconds'\r\n",
+							"    )"
+						],
+						"outputs": [],
+						"execution_count": null
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"query.awaitTermination()"
+						],
+						"outputs": [],
+						"execution_count": null
+					}
+				]
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/data_ingestion_Raw_Elayer')]",
+			"type": "Microsoft.Synapse/workspaces/notebooks",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"folder": {
+					"name": "data"
+				},
+				"nbformat": 4,
+				"nbformat_minor": 2,
+				"bigDataPool": {
+					"referenceName": "cluster",
+					"type": "BigDataPoolReference"
+				},
+				"sessionProperties": {
+					"driverMemory": "28g",
+					"driverCores": 4,
+					"executorMemory": "28g",
+					"executorCores": 4,
+					"numExecutors": 2,
+					"conf": {
+						"spark.dynamicAllocation.enabled": "false",
+						"spark.dynamicAllocation.minExecutors": "2",
+						"spark.dynamicAllocation.maxExecutors": "2",
+						"spark.autotune.trackingId": "b4a69cc3-b95d-4a66-a2b2-14681eefe81d"
+					}
+				},
+				"metadata": {
+					"saveOutput": true,
+					"enableDebugMode": true,
+					"kernelspec": {
+						"name": "synapse_pyspark",
+						"display_name": "Synapse PySpark"
+					},
+					"language_info": {
+						"name": "python"
+					},
+					"a365ComputeOptions": {
+						"id": "/subscriptions/9f5c1632-9893-4fdf-b03b-0f2ebd29d77e/resourceGroups/rg_yt_resource_gp_mk/providers/Microsoft.Synapse/workspaces/syanpsepython/bigDataPools/cluster",
+						"name": "cluster",
+						"type": "Spark",
+						"endpoint": "https://syanpsepython.dev.azuresynapse.net/livyApi/versions/2019-11-01-preview/sparkPools/cluster",
+						"auth": {
+							"type": "AAD",
+							"authResource": "https://dev.azuresynapse.net"
+						},
+						"sparkVersion": "3.3",
+						"nodeCount": 10,
+						"cores": 8,
+						"memory": 56
+					},
+					"sessionKeepAliveTimeout": 30
+				},
+				"cells": [
+					{
+						"cell_type": "code",
+						"source": [
+							"from pyspark.sql import SparkSession\r\n",
+							"from pyspark.sql import Row\r\n",
+							"from pyspark.sql.types import StructType, StructField, StringType\r\n",
+							"from com.dataengineering.qualitycheck_utils import Dataquality\r\n",
+							"from com.dataengineering.writer_utils import writer\r\n",
+							"from com.dataengineering.helper_utils import helper"
+						],
+						"outputs": [],
+						"execution_count": 1
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"raw_path  = f\"abfss://landingzoneraw@sasyanpse.dfs.core.windows.net/raw_zone/values/\"\r\n",
+							"elayer_path = f\"abfss://landingzoneraw@sasyanpse.dfs.core.windows.net/elayer_zone/values/\""
+						],
+						"outputs": [],
+						"execution_count": 3
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"schema = StructType([\r\n",
+							"    StructField(\"Year\", StringType(), True),\r\n",
+							"    StructField(\"month\", StringType(), True),\r\n",
+							"    StructField(\"Industry_aggregation_NZSIOC\", StringType(), True),\r\n",
+							"    StructField(\"Industry_code_NZSIOC\", StringType(), True),\r\n",
+							"    StructField(\"Industry_name_NZSIOC\", StringType(), True),\r\n",
+							"    StructField(\"Units\", StringType(), True),\r\n",
+							"    StructField(\"Variable_code\", StringType(), True),\r\n",
+							"    StructField(\"Variable_name\", StringType(), True),\r\n",
+							"    StructField(\"Variable_category\", StringType(), True),\r\n",
+							"    StructField(\"Value\", StringType(), True)\r\n",
+							"])"
+						],
+						"outputs": [],
+						"execution_count": 4
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"df = spark.readStream.format(\"delta\").load(raw_path)"
+						],
+						"outputs": [],
+						"execution_count": 5
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"dq_check = {\"check_column_is_not_null\": [\"Units\"]}\r\n",
+							"qc_check = Dataquality(spark)\r\n",
+							""
+						],
+						"outputs": [],
+						"execution_count": 6
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"helper = helper(spark)\r\n",
+							"df = helper.add_metadata_columns(df)\r\n",
+							""
+						],
+						"outputs": [],
+						"execution_count": 12
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"df = qc_check.run_data_quality_checks(dq_check, df)\r\n",
+							""
+						],
+						"outputs": [],
+						"execution_count": 8
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"writer = writer(spark)"
+						],
+						"outputs": [],
+						"execution_count": 10
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"query = writer.write_streaming_data(\r\n",
+							"    df= df,\r\n",
+							"    path = raw_path, \r\n",
+							"    processing_time='2 seconds'\r\n",
+							"    )"
+						],
+						"outputs": [],
+						"execution_count": 11
+					}
+				]
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/test DQ')]",
+			"type": "Microsoft.Synapse/workspaces/notebooks",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"folder": {
+					"name": "data"
+				},
+				"nbformat": 4,
+				"nbformat_minor": 2,
+				"bigDataPool": {
+					"referenceName": "testcluster",
+					"type": "BigDataPoolReference"
+				},
+				"sessionProperties": {
+					"driverMemory": "56g",
+					"driverCores": 8,
+					"executorMemory": "56g",
+					"executorCores": 8,
+					"numExecutors": 2,
+					"conf": {
+						"spark.dynamicAllocation.enabled": "false",
+						"spark.dynamicAllocation.minExecutors": "2",
+						"spark.dynamicAllocation.maxExecutors": "2",
+						"spark.autotune.trackingId": "195160e5-47d2-4c7d-a1fb-a19532033f51"
+					}
+				},
+				"metadata": {
+					"saveOutput": true,
+					"enableDebugMode": true,
+					"kernelspec": {
+						"name": "synapse_pyspark",
+						"display_name": "Synapse PySpark"
+					},
+					"language_info": {
+						"name": "python"
+					},
+					"a365ComputeOptions": {
+						"id": "/subscriptions/9f5c1632-9893-4fdf-b03b-0f2ebd29d77e/resourceGroups/rg_yt_resource_gp_mk/providers/Microsoft.Synapse/workspaces/syanpsepython/bigDataPools/testcluster",
+						"name": "testcluster",
+						"type": "Spark",
+						"endpoint": "https://syanpsepython.dev.azuresynapse.net/livyApi/versions/2019-11-01-preview/sparkPools/testcluster",
+						"auth": {
+							"type": "AAD",
+							"authResource": "https://dev.azuresynapse.net"
+						},
+						"sparkVersion": "3.3",
+						"nodeCount": 10,
+						"cores": 8,
+						"memory": 56
+					},
+					"sessionKeepAliveTimeout": 30
+				},
+				"cells": [
+					{
+						"cell_type": "code",
+						"source": [
+							"from pyspark.sql import SparkSession\r\n",
+							"from pyspark.sql.functions import lit, when, col"
+						],
+						"outputs": [],
+						"execution_count": 1
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"# Create a list of data with some null values\r\n",
+							"data = [\r\n",
+							"    (1, \"Alice\", 25),\r\n",
+							"    (2, \"Bob\", None),\r\n",
+							"    (3, \"Charlie\", 30),\r\n",
+							"    (4, None, 22),\r\n",
+							"]\r\n",
+							"\r\n",
+							"# Define the schema for the DataFrame\r\n",
+							"schema = [\"id\", \"name\", \"age\"]\r\n",
+							"\r\n",
+							"# Create an initial DataFrame\r\n",
+							"df = spark.createDataFrame(data, schema)\r\n",
+							""
+						],
+						"outputs": [],
+						"execution_count": 5
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"%run data/Data_Quality_Utilities"
+						],
+						"outputs": [],
+						"execution_count": 4
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"display(df)\r\n",
+							""
+						],
+						"outputs": [],
+						"execution_count": null
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							},
+							"collapsed": false
+						},
+						"source": [
+							"dq_check = {\"check_column_is_not_null\": [\"name\"]}\r\n",
+							"df, df_err = run_data_quality_checks(dq_check, df)\r\n",
+							"display(df)\r\n",
+							""
+						],
+						"outputs": [],
+						"execution_count": 8
+					}
+				]
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/tmp_Data_Quality_Utilities')]",
+			"type": "Microsoft.Synapse/workspaces/notebooks",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"folder": {
+					"name": "data"
+				},
+				"nbformat": 4,
+				"nbformat_minor": 2,
+				"bigDataPool": {
+					"referenceName": "cluster",
+					"type": "BigDataPoolReference"
+				},
+				"sessionProperties": {
+					"driverMemory": "56g",
+					"driverCores": 8,
+					"executorMemory": "56g",
+					"executorCores": 8,
+					"numExecutors": 2,
+					"conf": {
+						"spark.dynamicAllocation.enabled": "false",
+						"spark.dynamicAllocation.minExecutors": "2",
+						"spark.dynamicAllocation.maxExecutors": "2",
+						"spark.autotune.trackingId": "cff756e1-db4c-475e-8289-ca017f8f29cf"
+					}
+				},
+				"metadata": {
+					"saveOutput": true,
+					"enableDebugMode": false,
+					"kernelspec": {
+						"name": "synapse_pyspark",
+						"display_name": "Synapse PySpark"
 					},
 					"language_info": {
 						"name": "python"
@@ -159,10 +1533,407 @@
 					{
 						"cell_type": "code",
 						"source": [
-							"print(\"test\")"
+							"from enum import Enum, unique\r\n",
+							"from typing import Any, List, Optional, Union\r\n",
+							"import pyspark.sql.functions as F\r\n",
+							"from pyspark.sql.functions import col, lit\r\n",
+							"from pyspark.sql import Column, DataFrame, Window\r\n",
+							"from pyspark.sql.window import Window\r\n",
+							"from typing import Any, Callable, List, NoReturn, Optional, TypeVar, cast\r\n",
+							"from pyspark.sql.functions import row_number\r\n",
+							"from pyspark.sql import SparkSession\r\n",
+							"import datetime"
 						],
 						"outputs": [],
 						"execution_count": null
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"DQ_RESULTS = \"__data_quality\"\r\n",
+							"_check_counter = 0\r\n",
+							"print(\"dq testing\")"
+						],
+						"outputs": [],
+						"execution_count": null
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"def check_column_is_numeric(\r\n",
+							"    df :DataFrame,\r\n",
+							"    column_name :str,\r\n",
+							"    filter_condition: Union[str, Column, None] = None,\r\n",
+							"):\r\n",
+							"    expected_condition = F.col(column_name).rlike(r\"^[0-9]*\\.?[0-9]*([Ee][+-]?[0-9]+)?$\")\r\n",
+							"    error_message = F.concat(\r\n",
+							"            F.lit(f\"CHECK_NUMERIC: Column `{column_name}` has value \"),\r\n",
+							"            F.col(column_name).cast(\"string\"),\r\n",
+							"            F.lit(\", which is not a numeric value\"),\r\n",
+							"    )\r\n",
+							"    return check_dq_conditions(\r\n",
+							"        df = df,\r\n",
+							"        expected_condition=expected_condition,\r\n",
+							"        error_message=error_message,\r\n",
+							"        filter_condition=filter_condition,\r\n",
+							"    )\r\n",
+							""
+						],
+						"outputs": [],
+						"execution_count": null
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"#function to check the field value is in correct date\r\n",
+							"\r\n",
+							"def check_column_date_type_cast(\r\n",
+							"        df :DataFrame,\r\n",
+							"        column_name: str,\r\n",
+							"        date_format: str,\r\n",
+							"        filter_condition: Union[str, Column, None] = None,      \r\n",
+							"):\r\n",
+							"    CHECK_CAST_COLUMN = \"__value_after_cast\"\r\n",
+							"    # date_format = 'yyMMddHHmmss'\r\n",
+							"    data_type = 'timestamp'\r\n",
+							"    if not column_name:\r\n",
+							"            raise ValueError(\"Invalid column name\")\r\n",
+							"    else:\r\n",
+							"        df = df.withColumn(\r\n",
+							"            CHECK_CAST_COLUMN,\r\n",
+							"            F.to_timestamp(F.col(column_name).cast(\"string\"), date_format),  # type: ignore[arg-type]\r\n",
+							"        )\r\n",
+							" \r\n",
+							"    expected_condition = F.col(CHECK_CAST_COLUMN).isNotNull() | F.col(column_name).isNull()\r\n",
+							"\r\n",
+							"    error_message = F.concat(\r\n",
+							"        F.lit(f\"CHECK_TYPE_CAST: Column `{column_name}` has value \"),\r\n",
+							"        F.col(column_name).cast(\"string\"),\r\n",
+							"        F.lit(f\", which cannot be safely cast to type {data_type}\"),\r\n",
+							"        F.lit(f\" using format {date_format}\") if data_type in [\"date\", \"timestamp\"] else F.lit(\"\"),\r\n",
+							"    )\r\n",
+							"\r\n",
+							"    return check_dq_conditions(\r\n",
+							"        df = df,\r\n",
+							"        expected_condition=expected_condition,\r\n",
+							"        error_message=error_message,\r\n",
+							"        filter_condition=filter_condition,\r\n",
+							"    )\r\n",
+							""
+						],
+						"outputs": [],
+						"execution_count": null
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"def check_dq_conditions(\r\n",
+							"        df : DataFrame,\r\n",
+							"        expected_condition: Union[str, Column],\r\n",
+							"        error_message: Union[str, Column],\r\n",
+							"        filter_condition: Union[str, Column, None] = None,\r\n",
+							"):\r\n",
+							"        global _check_counter\r\n",
+							"\r\n",
+							"        if isinstance(error_message, str):\r\n",
+							"            error_message = F.lit(error_message)\r\n",
+							"\r\n",
+							"        if isinstance(expected_condition, str):\r\n",
+							"            expected_condition = F.expr(expected_condition)\r\n",
+							"\r\n",
+							"        if filter_condition is None:\r\n",
+							"            filter_condition = F.expr(\"1 = 1\")\r\n",
+							"        elif isinstance(filter_condition, str):\r\n",
+							"            filter_condition = F.expr(filter_condition)\r\n",
+							"\r\n",
+							"        _check_counter += 1\r\n",
+							"        df = df.withColumn(\r\n",
+							"            f\"{DQ_RESULTS}_{_check_counter}\",\r\n",
+							"            F.when(filter_condition & ~expected_condition, error_message)\r\n",
+							"            .otherwise(F.lit(None).cast(\"string\"))\r\n",
+							"        )\r\n",
+							"        return df  \r\n",
+							""
+						],
+						"outputs": [],
+						"execution_count": null
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"#function to check the duplicate value \r\n",
+							"def check_duplicate_in_columns(\r\n",
+							"    df: DataFrame,\r\n",
+							"    filter_condition: Union[str, Column, None] = None,\r\n",
+							"    column_names: List[str] =[]\r\n",
+							"):\r\n",
+							"    #global df\r\n",
+							"    #column_names = [\"col1\",\"col2\"]\r\n",
+							"\r\n",
+							"    #using window function to get the duplicate count\r\n",
+							"    df = df.withColumn(\"__duplicate_count\", F.count(\"*\").over(Window.partitionBy(*column_names)))\r\n",
+							"\r\n",
+							"    #getting the rownumber for the columns on which we need to validate the duplicate values\r\n",
+							"    df = df.withColumn(\"__row_number\", row_number().over(Window.partitionBy(*column_names).orderBy(column_names[1])))\r\n",
+							"    \r\n",
+							"    expected_condition = (F.col(\"__duplicate_count\") == 1) | (F.col(\"__row_number\") == 1)\r\n",
+							"    formatted_columns = \", \".join([f\"`{col}`\" for col in column_names])\r\n",
+							"    error_message= F.concat(F.lit(f\"CHECK_UNIQUE: Column(s) {formatted_columns} has value (\"),\r\n",
+							"                    F.concat_ws(\", \", *column_names),\r\n",
+							"                    F.lit(\"), which is a duplicate value\"))\r\n",
+							"    return check_dq_conditions(\r\n",
+							"        df = df,\r\n",
+							"        expected_condition=expected_condition,\r\n",
+							"        error_message=error_message,\r\n",
+							"        filter_condition=filter_condition,\r\n",
+							"    )"
+						],
+						"outputs": [],
+						"execution_count": null
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"#function to check the value is not null \r\n",
+							"\r\n",
+							"def check_column_is_not_null(\r\n",
+							"    df : DataFrame, \r\n",
+							"    column_name :str,\r\n",
+							"    filter_condition: Union[str, Column, None] = None,\r\n",
+							"):\r\n",
+							"    expected_condition = F.col(column_name).isNotNull()\r\n",
+							"    error_message= f\"CHECK_NOT_NULL: Column `{column_name}` is null\"\r\n",
+							"    return check_dq_conditions(\r\n",
+							"        df = df,\r\n",
+							"        expected_condition=expected_condition,\r\n",
+							"        error_message=error_message,\r\n",
+							"        filter_condition=filter_condition,\r\n",
+							"    )\r\n",
+							""
+						],
+						"outputs": [],
+						"execution_count": null
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"def build_df(\r\n",
+							"    df : DataFrame\r\n",
+							") -> DataFrame:\r\n",
+							"        \"\"\"Obtain the resulting DataFrame with data quality checks applied.\r\n",
+							"\r\n",
+							"        Returns\r\n",
+							"        -------\r\n",
+							"        DataFrame\r\n",
+							"            The modified PySpark DataFrame with updated validation results.\r\n",
+							"        \"\"\"\r\n",
+							"        temp_dq_cols = [c for c in df.columns if c.startswith(DQ_RESULTS + \"_\")]\r\n",
+							"        print(temp_dq_cols)\r\n",
+							"        df = (\r\n",
+							"            df\r\n",
+							"            .withColumn(\r\n",
+							"                DQ_RESULTS,\r\n",
+							"                F.filter(F.array(*temp_dq_cols), lambda c: c.isNotNull())\r\n",
+							"            )\r\n",
+							"            .withColumn(\r\n",
+							"                DQ_RESULTS,\r\n",
+							"                F.when(F.size(DQ_RESULTS) == 0, F.lit(None))\r\n",
+							"                .otherwise(F.col(DQ_RESULTS))\r\n",
+							"            )\r\n",
+							"            .drop(*temp_dq_cols)\r\n",
+							"        )  # fmt: skip\r\n",
+							"        return df"
+						],
+						"outputs": [],
+						"execution_count": null
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"\"\"\"\r\n",
+							"splitting the data frame in where records are correct after validation and in one dataframe\r\n",
+							"where records having duplicate , null or incorrect date as per the DQ Validation\r\n",
+							"\r\n",
+							"\"\"\"\r\n",
+							"from typing import Tuple\r\n",
+							"def split_dataframe_by_dataquality(temp) -> Tuple:\r\n",
+							"\r\n",
+							"    \"\"\"\r\n",
+							"    Splits the input PySpark dataframe into two dataframes: error_df for rows with dq issues and clean_df for rows without dq issues.\r\n",
+							"    \"\"\"\r\n",
+							"\r\n",
+							"    cols_to_drop = [\"__duplicate_count\", \"__row_number\"]\r\n",
+							"    for col_name in cols_to_drop:\r\n",
+							"        if col_name in temp.columns:\r\n",
+							"            temp = temp.drop(col_name)\r\n",
+							"    error_df = temp.filter(col(\"__data_quality\").isNotNull())\r\n",
+							"    clean_df = temp.filter(col(\"__data_quality\").isNull()).drop(\"__data_quality\")\r\n",
+							"\r\n",
+							"    return (error_df, clean_df)"
+						],
+						"outputs": [],
+						"execution_count": null
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"\r\n",
+							"def list_non_metadata_columns(df: DataFrame) -> List[str]:\r\n",
+							"    return [col for col in df.columns if not col.startswith(\"__\")]"
+						],
+						"outputs": [],
+						"execution_count": null
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"#need to test this function to add empty list logic\r\n",
+							"def run_data_quality_checks( dq_rules :{},df=  DataFrame):\r\n",
+							"    df = df\r\n",
+							"    print(\"started\")\r\n",
+							"    for dq_rule_name, Col_names in dq_rules.items():\r\n",
+							"        # look up the actual function by name in the function_dict\r\n",
+							"        if (dq_rule_name == \"check_duplicate_in_columns\"):\r\n",
+							"            #checking duplicate vlaues for all the columns\r\n",
+							"            if not Col_names or \"All\" in Col_names: \r\n",
+							"                col_list= list_non_metadata_columns(df =df)\r\n",
+							"                df = check_duplicate_in_columns(df= df, column_names = col_list)\r\n",
+							"            else :\r\n",
+							"                df = check_duplicate_in_columns(df= df, column_names = Col_names)\r\n",
+							"        elif (dq_rule_name == \"check_column_is_not_null\"):\r\n",
+							"            #checking column value is not null\r\n",
+							"            for column in Col_names:\r\n",
+							"                #Col_name = Col_names.pop()\r\n",
+							"                df= check_column_is_not_null(df= df, column_name = column)\r\n",
+							"        elif (dq_rule_name == \"check_column_is_numeric\"):\r\n",
+							"            #checking column is numeric\r\n",
+							"            for column in Col_names:\r\n",
+							"                #Col_name = Col_names.pop()\r\n",
+							"                df= check_column_is_numeric(df= df, column_name = column)\r\n",
+							"        elif (dq_rule_name == \"check_column_date_type_cast\"):\r\n",
+							"            #checking date field having correct date \r\n",
+							"            for column_name,column_format in Col_names.items():\r\n",
+							"                #Col_name = Col_names.pop()\r\n",
+							"                df= check_column_date_type_cast(df= df, column_name = column_name,date_format =column_format )\r\n",
+							"                df = df.drop(\"__value_after_cast\")\r\n",
+							"    df = build_df(df)\r\n",
+							"    print(\"end\")\r\n",
+							"    error_df,clean_df = split_dataframe_by_dataquality(df)\r\n",
+							"    return error_df,clean_df\r\n",
+							""
+						],
+						"outputs": [],
+						"execution_count": 4
 					}
 				]
 			},
@@ -178,8 +1949,8 @@
 					"delayInMinutes": 15
 				},
 				"autoScale": {
-					"enabled": false,
-					"maxNodeCount": 4,
+					"enabled": true,
+					"maxNodeCount": 5,
 					"minNodeCount": 3
 				},
 				"nodeCount": 3,
@@ -188,10 +1959,65 @@
 				"sparkVersion": "3.3",
 				"isComputeIsolationEnabled": false,
 				"sessionLevelPackagesEnabled": false,
+				"customLibraries": [
+					{
+						"name": "dataengineering001-1.0-py3-none-any.whl",
+						"path": "syanpsepython/libraries/dataengineering001-1.0-py3-none-any.whl",
+						"containerName": "prep",
+						"uploadedTimestamp": "0001-01-01T00:00:00+00:00",
+						"type": "whl"
+					}
+				],
 				"annotations": []
 			},
 			"dependsOn": [],
 			"location": "centralus"
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/testcluster')]",
+			"type": "Microsoft.Synapse/workspaces/bigDataPools",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"autoPause": {
+					"enabled": true,
+					"delayInMinutes": 15
+				},
+				"autoScale": {
+					"enabled": false,
+					"maxNodeCount": 3,
+					"minNodeCount": 3
+				},
+				"nodeCount": 3,
+				"nodeSize": "Small",
+				"nodeSizeFamily": "MemoryOptimized",
+				"sparkVersion": "3.3",
+				"isComputeIsolationEnabled": false,
+				"sessionLevelPackagesEnabled": false,
+				"customLibraries": [
+					{
+						"name": "dataengineering001-1.0-py3-none-any.whl",
+						"path": "syanpsepython/libraries/dataengineering001-1.0-py3-none-any.whl",
+						"containerName": "prep",
+						"uploadedTimestamp": "0001-01-01T00:00:00+00:00",
+						"type": "whl"
+					}
+				],
+				"annotations": []
+			},
+			"dependsOn": [],
+			"location": "centralus"
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/child')]",
+			"type": "Microsoft.Synapse/workspaces/pipelines",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"annotations": []
+			},
+			"dependsOn": []
 		}
 	]
 }
