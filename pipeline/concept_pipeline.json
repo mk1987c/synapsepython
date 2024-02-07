@@ -35,6 +35,51 @@
 						"type": "Expression"
 					}
 				}
+			},
+			{
+				"name": "getPipelinestatus",
+				"type": "WebActivity",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"method": "POST",
+					"url": {
+						"value": "https://@{pipeline().parameters.synapse_workspace}.azuresynapse.net/queryPipelineRuns?api-version=2020-12-01",
+						"type": "Expression"
+					},
+					"connectVia": {
+						"referenceName": "AutoResolveIntegrationRuntime",
+						"type": "IntegrationRuntimeReference"
+					},
+					"body": {
+						"value": "{\"lastUpdatedAfter\":\"@addDays(utcNow(),-15)}",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "getPipelineName",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "pipeline_name",
+					"value": {
+						"value": "@pipeline().Pipeline",
+						"type": "Expression"
+					}
+				}
 			}
 		],
 		"parameters": {
@@ -45,6 +90,10 @@
 			"resource_group": {
 				"type": "string",
 				"defaultValue": "rg_yt_resource_gp_mk"
+			},
+			"synapse_workspace": {
+				"type": "string",
+				"defaultValue": "web"
 			}
 		},
 		"variables": {
@@ -52,6 +101,9 @@
 				"type": "String"
 			},
 			"run_id": {
+				"type": "String"
+			},
+			"pipeline_name": {
 				"type": "String"
 			}
 		},
