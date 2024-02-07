@@ -1,5 +1,5 @@
 {
-	"name": "Eva_Data_Quality_Utilities",
+	"name": "tmp_Data_Quality_Utilities",
 	"properties": {
 		"folder": {
 			"name": "data"
@@ -20,7 +20,7 @@
 				"spark.dynamicAllocation.enabled": "false",
 				"spark.dynamicAllocation.minExecutors": "2",
 				"spark.dynamicAllocation.maxExecutors": "2",
-				"spark.autotune.trackingId": "56873d26-b1ec-4a88-babe-db87dd446266"
+				"spark.autotune.trackingId": "cff756e1-db4c-475e-8289-ca017f8f29cf"
 			}
 		},
 		"metadata": {
@@ -43,9 +43,9 @@
 					"authResource": "https://dev.azuresynapse.net"
 				},
 				"sparkVersion": "3.3",
-				"nodeCount": 10,
-				"cores": 8,
-				"memory": 56,
+				"nodeCount": 3,
+				"cores": 4,
+				"memory": 28,
 				"automaticScaleJobs": false
 			},
 			"sessionKeepAliveTimeout": 30
