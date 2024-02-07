@@ -14,7 +14,7 @@
 				"typeProperties": {
 					"variableName": "pipeline_monitor",
 					"value": {
-						"value": "@concat('https://web.azuresynapse.net/en/monitoring/pipelineruns/',pipeline().RunId,'?workspace=%2Fsubscriptions%2F','%2Fproviders%2FMicrosoft.Synapse%2Fworkspaces%2F',pipeline().DataFactory)",
+						"value": "@concat('https://web.azuresynapse.net/en/monitoring/pipelineruns/',pipeline().RunId,\n    '?workspace=%2Fsubscriptions%2F',\n    pipeline().parameters.subscription_id,\n    '%2FresourceGroups%2F',\n    pipeline().parameters.resource_group,\n    '%2Fproviders%2FMicrosoft.Synapse%2Fworkspaces%2F',\n    pipeline().DataFactory)",
 						"type": "Expression"
 					}
 				}
@@ -37,6 +37,16 @@
 				}
 			}
 		],
+		"parameters": {
+			"subscription_id": {
+				"type": "string",
+				"defaultValue": "9f5c1632-9893-4fdf-b03b-0f2ebd29d77e"
+			},
+			"resource_group": {
+				"type": "string",
+				"defaultValue": "rg_yt_resource_gp_mk"
+			}
+		},
 		"variables": {
 			"pipeline_monitor": {
 				"type": "String"
